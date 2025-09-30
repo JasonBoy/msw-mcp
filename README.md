@@ -129,9 +129,107 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 }
 ```
 
-### Browser Integration (Phase 2)
+### Frontend Integration
 
-_Coming soon: Browser service worker that connects to the WebSocket server_
+The MSW MCP Server integrates with your existing frontend MSW setup through a WebSocket bridge module.
+
+#### Integration Files
+
+Create the following files in your frontend project:
+
+**1. `mocks/websocket-bridge.js`** - WebSocket client that connects to MCP server
+
+**2. Update `mocks/index.js`** to initialize the bridge:
+
+```javascript
+export async function enableMocking() {
+  if (process.env.NODE_ENV !== 'development') {
+    return;
+  }
+
+  const { worker } = await import('./browser');
+
+  await worker.start({
+    onUnhandledRequest: 'bypass',
+    quiet: false,
+    serviceWorker: {
+      url: '/mockServiceWorker.js',
+    },
+  });
+
+  // Initialize WebSocket bridge for AI-driven handler updates
+  try {
+    const { createMSWBridge } = await import('./websocket-bridge');
+    const bridge = createMSWBridge(worker);
+
+    if (bridge) {
+      console.log('[MSW] WebSocket bridge initialized for AI integration');
+      if (typeof window !== 'undefined') {
+        window.__mswBridge = bridge;
+      }
+    }
+  } catch (error) {
+    console.warn('[MSW] Failed to initialize WebSocket bridge:', error);
+  }
+
+  return worker;
+}
+```
+
+#### Configuration
+
+Set the MCP server URL via environment variable (optional):
+
+```bash
+# Default: ws://localhost:6789
+export MCP_SERVER_URL=ws://localhost:3001
+```
+
+#### Features
+
+- ✅ **Development-only mode** - Bridge only activates in `NODE_ENV=development`
+- ✅ **Dynamic handler management** - Add/remove/reset handlers in real-time
+- ✅ **Automatic reconnection** - Reconnects if connection drops
+- ✅ **Safe execution context** - Handler code executes with controlled scope
+- ✅ **Debugging support** - Access bridge via `window.__mswBridge` in console
+
+#### Enabling/Disabling Connection
+
+To disable the WebSocket connection temporarily, edit `mocks/websocket-bridge.js`:
+
+```javascript
+connect() {
+  // WebSocket connection disabled for now
+  console.log(`[MSW Bridge] WebSocket connection disabled`)
+  return
+
+  // ... rest of connection code
+}
+```
+
+To re-enable, simply remove the early return statement.
+
+#### Example Workflow
+
+1. **Start MCP Server:**
+
+   ```bash
+   cd msw-mcp
+   npm run build && npm run start
+   ```
+
+2. **Start Frontend Dev Server:**
+
+   ```bash
+   cd your-frontend-project
+   npm run dev
+   ```
+
+3. **Use AI Tools via Claude Desktop:**
+   - AI generates handler code
+   - MCP server sends handlers via WebSocket
+   - Browser updates handlers in real-time
+   - No page reload required
 
 ## 💬 AI Usage Examples
 
@@ -191,19 +289,38 @@ MSW MCP Server: Creates handlers for github.com API endpoints
 
 ## 📁 Project Structure
 
+### MCP Server
+
 ```
-src/
-├── index.ts                 # Main MCP server entry point
-├── tools/                   # MCP tool implementations
-│   ├── msw-add-handlers.ts
-│   ├── msw-reset-handlers.ts
-│   ├── msw-remove-handlers.ts
-│   └── msw-get-status.ts
-├── websocket/               # WebSocket server & connection management
-│   ├── server.ts           # WebSocket server
-│   ├── connection-manager.ts # Client connection handling
-│   └── protocol.ts         # Message type definitions
-└── utils/                   # Utilities (future)
+msw-mcp/
+├── src/
+│   ├── index.ts                  # Main MCP server entry point
+│   ├── tools/                    # MCP tool implementations
+│   │   ├── msw-add-handlers.ts
+│   │   ├── msw-reset-handlers.ts
+│   │   ├── msw-remove-handlers.ts
+│   │   └── msw-get-status.ts
+│   └── websocket/                # WebSocket server & connection management
+│       ├── server.ts             # WebSocket server
+│       ├── connection-manager.ts # Client connection handling
+│       └── protocol.ts           # Message type definitions
+├── package.json
+└── tsconfig.json
+```
+
+### Frontend Integration
+
+```
+your-frontend-project/
+├── mocks/
+│   ├── websocket-bridge.js      # WebSocket client bridge (NEW)
+│   ├── index.js                 # MSW initialization (MODIFIED)
+│   ├── browser.js               # MSW worker setup
+│   ├── handlers.js              # Base handlers
+│   └── custom-handlers/         # Local-only handlers (gitignored)
+├── mockServiceWorker.js         # MSW service worker
+└── src/
+    └── main.js                  # App entry point
 ```
 
 ## 🔧 Development
@@ -229,10 +346,47 @@ node build/index.js --mock-ws-port=8080
 # Connect WebSocket client to ws://localhost:8080
 ```
 
-## 🌐 Command Line Options
+## ⚙️ Configuration
+
+### MCP Server Options
+
+**Command Line Arguments:**
 
 - `--mock-ws-port <port>` - Set WebSocket server port (default: 6789)
 - `--mock-ws-port=<port>` - Alternative syntax with equals sign
+
+**Example:**
+
+```bash
+node build/index.js --mock-ws-port=3001
+```
+
+### Frontend Bridge Options
+
+**Environment Variables:**
+
+- `MCP_SERVER_URL` - WebSocket server URL (default: `ws://localhost:6789`)
+- `NODE_ENV` - Must be `development` for bridge to activate
+
+**Constructor Options:**
+
+```javascript
+const bridge = createMSWBridge(worker, {
+  url: 'ws://localhost:3001', // MCP server URL
+  reconnectInterval: 5000, // Time between reconnect attempts (ms)
+  maxReconnectAttempts: 10, // Max reconnection attempts
+});
+```
+
+**Debugging:**
+
+Access bridge instance in browser console:
+
+```javascript
+window.__mswBridge; // Bridge instance (dev only)
+window.__mswBridge.ws; // WebSocket connection
+window.__mswBridge.activeHandlers; // Currently active handlers
+```
 
 ## 🔮 Roadmap
 
@@ -243,12 +397,15 @@ node build/index.js --mock-ws-port=8080
 - [x] Command line port configuration
 - [x] Claude Desktop integration
 
-### Phase 2: In Progress
+### Phase 2: ✅ Complete
 
-- [ ] Browser service worker implementation
-- [ ] WebSocket client connection to MCP server
-- [ ] Real-time handler updates in browser
-- [ ] MSW worker lifecycle management
+- [x] Browser WebSocket bridge implementation
+- [x] WebSocket client connection to MCP server
+- [x] Real-time handler updates in browser
+- [x] Dynamic handler management (add/remove/reset)
+- [x] Integration with existing MSW setups
+- [x] Development-only execution mode
+- [x] Automatic reconnection logic
 
 ### Phase 3: Future
 
