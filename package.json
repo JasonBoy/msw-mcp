@@ -1,0 +1,41 @@
+{
+  "name": "msw-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Mock Service Worker AI interaction",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "dev": "npm run build && node build/index.js",
+    "start": "node build/index.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.3",
+    "prettier": "^3.6.2",
+    "typescript": "^5.0.0"
+  },
+  "lint-staged": {
+    "*.{js,ts,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "keywords": [
+    "mcp",
+    "mock-service-worker",
+    "msw",
+    "ai",
+    "testing"
+  ],
+  "author": "",
+  "license": "MIT"
+}
