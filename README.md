@@ -331,7 +331,8 @@ MSW MCP Server: Creates handlers for github.com API endpoints
   "id": "uuid",
   "type": "ADD_HANDLERS" | "RESET_HANDLERS" | "REMOVE_HANDLERS" | "UPDATE_HANDLERS" | "GET_STATUS",
   "handlers": ["handler1", "handler2"], // Optional
-  "patterns": ["/pattern1", "/pattern2"] // Optional for REMOVE_HANDLERS and UPDATE_HANDLERS
+  "patterns": ["/pattern1", "/pattern2"], // Optional for REMOVE_HANDLERS and UPDATE_HANDLERS
+  "once": true // Optional for ADD_HANDLERS (one-time handlers)
 }
 ```
 
@@ -359,6 +360,7 @@ msw-mcp/
 │   │   ├── msw-add-handlers.ts
 │   │   ├── msw-reset-handlers.ts
 │   │   ├── msw-remove-handlers.ts
+│   │   ├── msw-update-handlers.ts
 │   │   └── msw-get-status.ts
 │   └── websocket/                # WebSocket server & connection management
 │       ├── server.ts             # WebSocket server
@@ -462,7 +464,10 @@ window.__mswBridge.activeHandlers; // Currently active handlers
 - [x] Browser WebSocket bridge implementation
 - [x] WebSocket client connection to MCP server
 - [x] Real-time handler updates in browser
-- [x] Dynamic handler management (add/remove/reset)
+- [x] Dynamic handler management (add/remove/reset/update)
+- [x] One-time handler support with `once` option
+- [x] MSW utilities support (bypass, passthrough, delay)
+- [x] Handler status summaries (method + URL only)
 - [x] Integration with existing MSW setups
 - [x] Development-only execution mode
 - [x] Automatic reconnection logic
