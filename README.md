@@ -30,11 +30,19 @@ The MSW MCP Server provides AI assistants with the ability to:
 
 ## 🛠️ MCP Tools
 
-The server exposes four main tools for AI interaction:
+The server exposes five main tools for AI interaction:
 
 ### `msw_add_handlers`
 
 Add new MSW request handlers to the browser service worker at runtime.
+
+**Available MSW Utilities:**
+
+- `http` - HTTP method handlers (get, post, put, delete, etc.)
+- `HttpResponse` - Response constructors (json, text, xml, etc.)
+- `bypass` - Bypass handler and perform original request
+- `passthrough` - Explicitly passthrough to network
+- `delay` - Add response delay for testing
 
 **Input:**
 
@@ -43,9 +51,38 @@ Add new MSW request handlers to the browser service worker at runtime.
   "handlers": [
     "http.get('/users', () => HttpResponse.json([{id:1,name:'John'}]))",
     "http.post('/users', async ({request}) => { const user = await request.json(); return HttpResponse.json({...user, id: Date.now()}) })"
+  ],
+  "once": false
+}
+```
+
+**Parameters:**
+
+- `handlers` (required): Array of handler code strings
+- `once` (optional, default: `false`): If `true`, handlers will only intercept the first matching request and then be automatically deactivated
+
+**Example with `bypass`:**
+
+```json
+{
+  "handlers": [
+    "http.get('https://api.example.com/data', async ({ request }) => { const url = new URL(request.url); if (url.searchParams.get('mock') === 'true') { const response = await fetch(bypass(request)); const data = await response.json(); return HttpResponse.json({ ...data, mocked: true }); } return passthrough(); })"
   ]
 }
 ```
+
+**Example with `once` (one-time handler):**
+
+```json
+{
+  "handlers": [
+    "http.get('/one-time-resource', () => HttpResponse.json({ special: true }))"
+  ],
+  "once": true
+}
+```
+
+After the first request to `/one-time-resource`, the handler will be automatically deactivated and subsequent requests will pass through to the real API.
 
 ### `msw_reset_handlers`
 
@@ -69,6 +106,29 @@ Remove specific handlers by URL patterns.
 {
   "patterns": ["/users", "/api/v1/*", "https://api.example.com/*"]
 }
+```
+
+### `msw_update_handlers`
+
+Update existing handlers by replacing handlers that match specified URL patterns with new handler code. This is an atomic operation.
+
+**Input:**
+
+```json
+{
+  "patterns": ["/users", "/api/v1/products"],
+  "handlers": [
+    "http.get('/users', () => HttpResponse.json([{id:1,name:'Updated User'}]))",
+    "http.get('/api/v1/products', () => HttpResponse.json([{id:1,name:'New Product'}]))"
+  ]
+}
+```
+
+**Example use case:**
+
+```
+AI: "Update the /users endpoint to return users with an 'updated' flag"
+→ Uses msw_update_handlers to atomically replace the handler
 ```
 
 ### `msw_get_status`
@@ -269,9 +329,9 @@ MSW MCP Server: Creates handlers for github.com API endpoints
 ```json
 {
   "id": "uuid",
-  "type": "ADD_HANDLERS" | "RESET_HANDLERS" | "REMOVE_HANDLERS" | "GET_STATUS",
+  "type": "ADD_HANDLERS" | "RESET_HANDLERS" | "REMOVE_HANDLERS" | "UPDATE_HANDLERS" | "GET_STATUS",
   "handlers": ["handler1", "handler2"], // Optional
-  "patterns": ["/pattern1", "/pattern2"] // Optional for REMOVE_HANDLERS
+  "patterns": ["/pattern1", "/pattern2"] // Optional for REMOVE_HANDLERS and UPDATE_HANDLERS
 }
 ```
 

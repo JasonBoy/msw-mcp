@@ -3,6 +3,7 @@ export interface WSMessage {
   type: WSMessageType;
   handlers?: string[] | undefined;
   patterns?: string[] | undefined;
+  once?: boolean | undefined;
   data?: any;
 }
 
@@ -10,6 +11,7 @@ export type WSMessageType =
   | 'ADD_HANDLERS'
   | 'RESET_HANDLERS'
   | 'REMOVE_HANDLERS'
+  | 'UPDATE_HANDLERS'
   | 'GET_STATUS'
   | 'SUCCESS'
   | 'ERROR'

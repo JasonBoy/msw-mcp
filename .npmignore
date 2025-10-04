@@ -1,0 +1,36 @@
+# Source files (only publish built files)
+src/
+tsconfig.json
+*.tsbuildinfo
+
+# Development files
+.husky/
+.vscode/
+.idea/
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Testing
+coverage/
+*.test.ts
+*.spec.ts
+
+# Documentation development
+docs/
+
+# Environment files
+.env*
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db

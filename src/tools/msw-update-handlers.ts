@@ -1,30 +1,31 @@
 import { z } from 'zod';
 import { ConnectionManager } from '../websocket/connection-manager.js';
 
-export function createMSWAddHandlersTool(connectionManager: ConnectionManager) {
+export function createMSWUpdateHandlersTool(
+  connectionManager: ConnectionManager,
+) {
   return {
-    name: 'msw_add_handlers',
+    name: 'msw_update_handlers',
     description:
-      'Add MSW request handlers to the browser service worker at runtime. Accepts JavaScript handler code strings that will be executed in the browser.',
+      'Update existing MSW request handlers by replacing handlers that match specified URL patterns with new handler code. This is an atomic operation that removes old handlers and adds new ones in a single transaction.',
     inputSchema: {
+      patterns: z
+        .array(z.string())
+        .describe(
+          'Array of URL patterns to match handlers to update (e.g., ["/users", "/api/v1/*", "https://api.example.com/*"])',
+        ),
       handlers: z
         .array(z.string())
         .describe(
-          'Array of MSW handler JavaScript code strings (e.g., ["http.get(\'/users\', () => HttpResponse.json([]))", "http.post(\'/users\', async ({request}) => {...})"])',
-        ),
-      once: z
-        .boolean()
-        .optional()
-        .describe(
-          'If true, marks handlers as one-time use. After the first successful match, the handler will be ignored for subsequent requests.',
+          'Array of new MSW handler JavaScript code strings to replace the matched handlers (e.g., ["http.get(\'/users\', () => HttpResponse.json([]))", "..."])',
         ),
     },
     handler: async ({
+      patterns,
       handlers,
-      once,
     }: {
+      patterns: string[];
       handlers: string[];
-      once?: boolean | undefined;
     }) => {
       try {
         if (!connectionManager.hasConnectedClients()) {
@@ -40,9 +41,9 @@ export function createMSWAddHandlersTool(connectionManager: ConnectionManager) {
 
         const response = await connectionManager.sendMessage({
           id: '', // Will be set by sendMessage
-          type: 'ADD_HANDLERS',
+          type: 'UPDATE_HANDLERS',
+          patterns,
           handlers,
-          once,
         });
 
         if (response.type === 'SUCCESS') {
@@ -50,7 +51,7 @@ export function createMSWAddHandlersTool(connectionManager: ConnectionManager) {
             content: [
               {
                 type: 'text' as const,
-                text: `Successfully added ${handlers.length} handler(s) to MSW. Active handlers: ${response.activeHandlers?.length || 0}`,
+                text: `Successfully updated handlers matching patterns: ${patterns.join(', ')}. Replaced with ${handlers.length} new handler(s). Active handlers: ${response.activeHandlers?.length || 0}`,
               },
             ],
           };
@@ -59,7 +60,7 @@ export function createMSWAddHandlersTool(connectionManager: ConnectionManager) {
             content: [
               {
                 type: 'text' as const,
-                text: `Error adding handlers: ${response.error || 'Unknown error'}`,
+                text: `Error updating handlers: ${response.error || 'Unknown error'}`,
               },
             ],
           };

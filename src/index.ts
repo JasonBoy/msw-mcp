@@ -6,6 +6,7 @@ import { WSServer } from './websocket/server.js';
 import { createMSWAddHandlersTool } from './tools/msw-add-handlers.js';
 import { createMSWResetHandlersTool } from './tools/msw-reset-handlers.js';
 import { createMSWRemoveHandlersTool } from './tools/msw-remove-handlers.js';
+import { createMSWUpdateHandlersTool } from './tools/msw-update-handlers.js';
 import { createMSWGetStatusTool } from './tools/msw-get-status.js';
 
 // Parse command line arguments
@@ -95,6 +96,17 @@ server.registerTool(
     inputSchema: removeHandlersTool.inputSchema,
   },
   removeHandlersTool.handler,
+);
+
+const updateHandlersTool = createMSWUpdateHandlersTool(connectionManager);
+server.registerTool(
+  updateHandlersTool.name,
+  {
+    title: 'Update MSW Handlers',
+    description: updateHandlersTool.description,
+    inputSchema: updateHandlersTool.inputSchema,
+  },
+  updateHandlersTool.handler,
 );
 
 const getStatusTool = createMSWGetStatusTool(connectionManager);
