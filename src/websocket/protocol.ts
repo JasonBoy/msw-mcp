@@ -4,6 +4,8 @@ export interface WSMessage {
   handlers?: string[] | undefined;
   patterns?: string[] | undefined;
   once?: boolean | undefined;
+  persist?: boolean | undefined;
+  persistLimit?: number | null | undefined;
   data?: any;
 }
 

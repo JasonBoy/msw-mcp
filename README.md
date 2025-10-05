@@ -183,6 +183,8 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
       "args": [
         "/absolute/path/to/msw-mcp/build/index.js",
         "--mock-ws-port=6789"
+        // Optional: Add "--single-client" for single-client mode
+        // Optional: Add "--persist-handlers" or "--persist-handlers=10" for persistence
       ]
     }
   }
@@ -249,6 +251,7 @@ export MCP_SERVER_URL=ws://localhost:3001
 
 - ✅ **Development-only mode** - Bridge only activates in `NODE_ENV=development`
 - ✅ **Dynamic handler management** - Add/remove/reset handlers in real-time
+- ✅ **Handler persistence** - Automatically restore handlers after page refresh (when enabled on server)
 - ✅ **Automatic reconnection** - Reconnects if connection drops
 - ✅ **Safe execution context** - Handler code executes with controlled scope
 - ✅ **Debugging support** - Access bridge via `window.__mswBridge` in console
@@ -416,12 +419,42 @@ node build/index.js --mock-ws-port=8080
 
 - `--mock-ws-port <port>` - Set WebSocket server port (default: 6789)
 - `--mock-ws-port=<port>` - Alternative syntax with equals sign
+- `--single-client` - Enable single-client mode (send messages only to the most recently connected tab). Default: broadcast to all connected tabs
+- `--persist-handlers` - Persist dynamically added handlers to localStorage across page refreshes (unlimited)
+- `--persist-handlers=<N>` - Persist only the N most recent handlers (FIFO)
 
 **Example:**
 
 ```bash
+# Default: broadcast to all tabs, no persistence
 node build/index.js --mock-ws-port=3001
+
+# Single-client mode: only the latest tab receives messages
+node build/index.js --mock-ws-port=3001 --single-client
+
+# Persist all handlers across page refreshes
+node build/index.js --persist-handlers
+
+# Persist only the 10 most recent handlers
+node build/index.js --persist-handlers=10
 ```
+
+**Broadcast vs Single-Client Mode:**
+
+- **Broadcast mode (default)**: Messages are sent to all connected browser tabs. All tabs stay in sync with handler state.
+- **Single-client mode**: Messages are sent only to the most recently connected tab. Useful when working with a single active tab to avoid confusion with multiple tabs open.
+
+**Handler Persistence:**
+
+When `--persist-handlers` is enabled, dynamically added handlers are saved to the browser's localStorage and automatically restored on page refresh. This prevents the need to re-add handlers after every reload.
+
+- **Storage key**: `msw_dynamic_handlers`
+- **FIFO behavior**: When a limit is set (e.g., `--persist-handlers=10`), only the N most recently added handlers are kept
+- **Development-only**: Persistence only works when `process.env.NODE_ENV === 'development'`
+- **Manual cleanup**: Clear persisted handlers from browser console:
+  ```javascript
+  window.__mswBridge.clearPersistedHandlers();
+  ```
 
 ### Frontend Bridge Options
 

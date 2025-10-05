@@ -13,10 +13,49 @@ import { createMSWGetStatusTool } from './tools/msw-get-status.js';
 function parseArgs() {
   const args = process.argv.slice(2);
   let port = 6789; // default port
+  let singleClient = false; // default: broadcast to all clients
+  let persistHandlers = false; // default: no persistence
+  let persistLimit: number | null = null; // null = unlimited
 
   for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    // Handle --single-client flag
+    if (arg === '--single-client') {
+      singleClient = true;
+      continue;
+    }
+
+    // Handle --persist-handlers flag
+    if (arg === '--persist-handlers') {
+      persistHandlers = true;
+      persistLimit = null; // unlimited
+      continue;
+    }
+
+    // Handle --persist-handlers=10 format
+    if (arg && arg.startsWith('--persist-handlers=')) {
+      persistHandlers = true;
+      const parts = arg.split('=');
+      const value = parts[1];
+      if (value) {
+        const parsed = parseInt(value, 10);
+        if (isNaN(parsed) || parsed <= 0) {
+          console.error(
+            `Invalid --persist-handlers value: ${value} (must be positive integer)`,
+          );
+          process.exit(1);
+        }
+        persistLimit = parsed;
+      } else {
+        console.error('Missing value after --persist-handlers=');
+        process.exit(1);
+      }
+      continue;
+    }
+
     // Handle --mock-ws-port 1234 format
-    if (args[i] === '--mock-ws-port' && i + 1 < args.length) {
+    if (arg === '--mock-ws-port' && i + 1 < args.length) {
       const portStr = args[i + 1];
       if (portStr) {
         const parsedPort = parseInt(portStr, 10);
@@ -27,10 +66,10 @@ function parseArgs() {
           process.exit(1);
         }
       }
-      break;
+      continue;
     }
+
     // Handle --mock-ws-port=1234 format
-    const arg = args[i];
     if (arg && arg.startsWith('--mock-ws-port=')) {
       const parts = arg.split('=');
       const portStr = parts[1];
@@ -46,14 +85,14 @@ function parseArgs() {
         console.error('Missing port number after --mock-ws-port=');
         process.exit(1);
       }
-      break;
+      continue;
     }
   }
 
-  return { port };
+  return { port, singleClient, persistHandlers, persistLimit };
 }
 
-const { port } = parseArgs();
+const { port, singleClient, persistHandlers, persistLimit } = parseArgs();
 
 const server = new McpServer({
   name: 'msw-mcp-server',
@@ -61,7 +100,10 @@ const server = new McpServer({
 });
 
 // Initialize WebSocket server for browser communication
-const wsServer = new WSServer(port);
+const wsServer = new WSServer(port, singleClient, {
+  persistHandlers,
+  persistLimit,
+});
 const connectionManager = wsServer.getConnectionManager();
 
 // Register MSW tools
