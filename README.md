@@ -181,11 +181,45 @@ Get current status of the MSW service worker and active handlers.
 }
 ```
 
-## 🚀 Usage
+## 🚀 Installation
 
-### Installation & Setup
+### Option 1: Use with npx (Recommended)
 
-1. **Clone and build:**
+No installation needed! Use directly with npx:
+
+```json
+{
+  "mcpServers": {
+    "msw-mcp-server": {
+      "command": "npx",
+      "args": ["msw-mcp@latest", "--mock-ws-port=6789", "--persist-handlers"]
+    }
+  }
+}
+```
+
+### Option 2: Global Installation
+
+```bash
+npm install -g msw-mcp
+```
+
+Then use in Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "msw-mcp-server": {
+      "command": "msw-mcp",
+      "args": ["--mock-ws-port=6789", "--persist-handlers"]
+    }
+  }
+}
+```
+
+### Option 3: Local Development
+
+For local development or contributing:
 
 ```bash
 git clone <repository>
@@ -194,37 +228,30 @@ npm install
 npm run build
 ```
 
-2. **Run the server:**
-
-```bash
-# Default port 6789
-npm run start
-
-# Custom WebSocket port
-node build/index.js --mock-ws-port 3001
-node build/index.js --mock-ws-port=8080
-```
-
-### Claude Desktop Integration
-
-Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Then use in Claude Desktop config:
 
 ```json
 {
   "mcpServers": {
     "msw-mcp-server": {
-      "type": "stdio",
       "command": "node",
       "args": [
         "/absolute/path/to/msw-mcp/build/index.js",
         "--mock-ws-port=6789"
-        // Optional: Add "--single-client" for single-client mode
-        // Optional: Add "--persist-handlers" or "--persist-handlers=10" for persistence
       ]
     }
   }
 }
 ```
+
+## 📡 Server Configuration
+
+### Available CLI Arguments
+
+- `--mock-ws-port <port>` or `--mock-ws-port=<port>` - WebSocket server port (default: 6789)
+- `--single-client` - Only send messages to most recently connected tab (default: broadcast to all)
+- `--persist-handlers` - Persist all handlers to localStorage
+- `--persist-handlers=<N>` - Persist only N most recent handlers (FIFO)
 
 ### Quick Setup with `/msw-setup` Prompt
 
@@ -576,19 +603,18 @@ node build/index.js --mock-ws-port=8080
 # Connect WebSocket client to ws://localhost:8080
 ```
 
-## ⚙️ Configuration
+## ⚙️ Advanced Configuration
 
-### MCP Server Options
+### Examples with All Options
 
-**Command Line Arguments:**
+**Using npx:**
 
-- `--mock-ws-port <port>` - Set WebSocket server port (default: 6789)
-- `--mock-ws-port=<port>` - Alternative syntax with equals sign
-- `--single-client` - Enable single-client mode (send messages only to the most recently connected tab). Default: broadcast to all connected tabs
-- `--persist-handlers` - Persist dynamically added handlers to localStorage across page refreshes (unlimited)
-- `--persist-handlers=<N>` - Persist only the N most recent handlers (FIFO)
+```bash
+# All options
+npx msw-mcp@latest --mock-ws-port=3001 --single-client --persist-handlers=10
+```
 
-**Example:**
+**Using node directly:**
 
 ```bash
 # Default: broadcast to all tabs, no persistence
