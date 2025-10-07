@@ -8,6 +8,7 @@ import { createMSWResetHandlersTool } from './tools/msw-reset-handlers.js';
 import { createMSWRemoveHandlersTool } from './tools/msw-remove-handlers.js';
 import { createMSWUpdateHandlersTool } from './tools/msw-update-handlers.js';
 import { createMSWGetStatusTool } from './tools/msw-get-status.js';
+import { createMSWSetupPrompt } from './prompts/msw-setup.js';
 
 // Parse command line arguments
 function parseArgs() {
@@ -160,6 +161,17 @@ server.registerTool(
     inputSchema: getStatusTool.inputSchema,
   },
   getStatusTool.handler,
+);
+
+// Register prompts
+const setupPrompt = createMSWSetupPrompt();
+server.registerPrompt(
+  setupPrompt.name,
+  {
+    title: 'Setup MSW Mocking',
+    description: setupPrompt.description,
+  },
+  setupPrompt.getPrompt,
 );
 
 // Start the server

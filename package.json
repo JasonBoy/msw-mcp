@@ -1,17 +1,31 @@
 {
   "name": "msw-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Mock Service Worker AI interaction",
   "type": "module",
   "main": "build/index.js",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./client": {
+      "types": "./build/client/index.d.ts",
+      "default": "./build/client/index.js"
+    }
+  },
   "files": [
     "build/",
+    "templates/",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "tsc -p tsconfig.json",
+    "build:client": "tsc -p tsconfig.client.json",
     "watch": "tsc --watch",
+    "watch:client": "tsc -p tsconfig.client.json --watch",
     "dev": "npm run build && node build/index.js",
     "start": "node build/index.js",
     "prepublishOnly": "npm run build",
@@ -38,6 +52,14 @@
     "*.{js,ts,json,md}": [
       "prettier --write"
     ]
+  },
+  "peerDependencies": {
+    "msw": "^2.11.0"
+  },
+  "peerDependenciesMeta": {
+    "msw": {
+      "optional": true
+    }
   },
   "keywords": [
     "mcp",

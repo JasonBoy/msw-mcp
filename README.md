@@ -2,6 +2,12 @@
 
 A Model Context Protocol (MCP) server that enables AI-driven control of Mock Service Worker (MSW) in browser environments. This server acts as a bridge between AI assistants and MSW service workers, allowing dynamic API mocking through intelligent handler generation and real-time updates.
 
+**Includes:**
+
+- 🖥️ **MCP Server** - WebSocket server for AI ↔ Browser communication
+- 📦 **Client Package** (`msw-mcp/client`) - Importable browser-side integration
+- 🤖 **`/msw-setup` Prompt** - Automated project scaffolding
+
 ## 🎯 Overview
 
 The MSW MCP Server provides AI assistants with the ability to:
@@ -10,6 +16,7 @@ The MSW MCP Server provides AI assistants with the ability to:
 - **Dynamically update** browser service worker handlers in real-time
 - **Manage API mocking** state and configuration remotely
 - **Control MSW lifecycle** (start, stop, reset handlers)
+- **Automated setup** via `/msw-setup` prompt for any web project
 
 ## 🏗️ Architecture
 
@@ -28,7 +35,35 @@ The MSW MCP Server provides AI assistants with the ability to:
 2. **MSW MCP Server** - Relays commands between AI and browser via WebSocket
 3. **Browser Service Worker** - Executes MSW handler updates in real-time
 
-## 🛠️ MCP Tools
+## 🛠️ MCP Tools & Prompts
+
+### Prompts
+
+#### `/msw-setup`
+
+Automated setup prompt that scaffolds MSW configuration in your web application.
+
+**Features:**
+
+- 🔍 Auto-detects framework (React, Vue, Svelte, vanilla)
+- 📦 Installs dependencies (`msw` and `msw-mcp`)
+- 📁 Creates complete mocks directory structure
+- ⚙️ Configures environment variables
+- 🔗 Integrates with app entry point
+- 🔄 Handles migration for existing MSW setups
+
+**Usage:**
+
+```
+/msw-setup
+```
+
+**Optional arguments:**
+
+- `framework` - Specify framework type (auto-detects if omitted)
+- `serviceWorkerPath` - Custom service worker URL (default: `/mockServiceWorker.js`)
+
+### Tools
 
 The server exposes five main tools for AI interaction:
 
@@ -191,60 +226,190 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 }
 ```
 
-### Frontend Integration
+### Quick Setup with `/msw-setup` Prompt
 
-The MSW MCP Server integrates with your existing frontend MSW setup through a WebSocket bridge module.
+The easiest way to set up MSW with AI-driven handler support is using the `/msw-setup` prompt (available in Claude Desktop or other MCP clients):
 
-#### Integration Files
+```
+/msw-setup
+```
 
-Create the following files in your frontend project:
+The AI will automatically:
 
-**1. `mocks/websocket-bridge.js`** - WebSocket client that connects to MCP server
+- ✅ Detect your framework (React, Vue, Svelte, etc.)
+- ✅ Install dependencies (`msw` and `msw-mcp`)
+- ✅ Create complete mocks directory structure
+- ✅ Configure environment variables
+- ✅ Integrate with your app entry point
+- ✅ Handle migration if MSW is already set up
 
-**2. Update `mocks/index.js`** to initialize the bridge:
+For existing MSW setups, it will migrate to use `msw-mcp/client` while preserving your existing handlers.
+
+### Manual Frontend Integration
+
+If you prefer manual setup, install the client package:
+
+```bash
+npm install -D msw-mcp
+```
+
+#### New Project Setup
+
+**1. Install MSW and initialize service worker:**
+
+```bash
+npm install -D msw@^2.11.0
+npx msw init public/ --save
+```
+
+**2. Create mocks structure:**
+
+**`mocks/handlers.js`** - Your API handlers:
 
 ```javascript
+import { http, HttpResponse } from 'msw';
+
+// Base handlers - committed to git
+const baseHandlers = [
+  // Add your handlers here
+];
+
+// Import custom handlers (local only, gitignored)
+let customHandlers = [];
+try {
+  const customModule = await import('./custom-handlers/index.js');
+  customHandlers = customModule.handlers || [];
+} catch (error) {
+  console.log('[MSW] No custom handlers found');
+}
+
+export const handlers = [...baseHandlers, ...customHandlers];
+```
+
+**`mocks/browser.js`** - MSW worker setup:
+
+```javascript
+import { setupWorker } from 'msw/browser';
+import * as msw from 'msw';
+import { handlers } from './handlers';
+
+// Expose MSW on window for msw-mcp client bridge
+if (typeof window !== 'undefined') {
+  window.msw = msw;
+}
+
+export const worker = setupWorker(...handlers);
+```
+
+**`mocks/index.js`** - Initialization with WebSocket bridge:
+
+```javascript
+import { enableMocking as enableMockingFromClient } from 'msw-mcp/client';
+import { worker } from './browser';
+
 export async function enableMocking() {
   if (process.env.NODE_ENV !== 'development') {
     return;
   }
 
-  const { worker } = await import('./browser');
+  const isMSWEnabled =
+    process.env.ENABLE_MSW_MOCK === '1' ||
+    process.env.ENABLE_MSW_MOCK === 'true';
 
-  await worker.start({
-    onUnhandledRequest: 'bypass',
-    quiet: false,
-    serviceWorker: {
-      url: '/mockServiceWorker.js',
-    },
-  });
-
-  // Initialize WebSocket bridge for AI-driven handler updates
-  try {
-    const { createMSWBridge } = await import('./websocket-bridge');
-    const bridge = createMSWBridge(worker);
-
-    if (bridge) {
-      console.log('[MSW] WebSocket bridge initialized for AI integration');
-      if (typeof window !== 'undefined') {
-        window.__mswBridge = bridge;
-      }
-    }
-  } catch (error) {
-    console.warn('[MSW] Failed to initialize WebSocket bridge:', error);
+  if (!isMSWEnabled) {
+    console.log('[MSW] Mocking disabled');
+    return;
   }
 
-  return worker;
+  const isWSEnabled =
+    process.env.ENABLE_MSW_WS_MOCK === '1' ||
+    process.env.ENABLE_MSW_WS_MOCK === 'true';
+
+  return enableMockingFromClient({
+    worker,
+    wsEnabled: isWSEnabled,
+    wsBridgeOptions: {
+      url: process.env.MCP_SERVER_URL || 'ws://localhost:6789',
+    },
+    workerOptions: {
+      onUnhandledRequest: 'bypass',
+      quiet: false,
+      serviceWorker: {
+        url: '/mockServiceWorker.js',
+      },
+    },
+  });
 }
 ```
 
-#### Configuration
+**3. Add .gitignore entry:**
 
-Set the MCP server URL via environment variable (optional):
+```gitignore
+# MSW local-only custom handlers
+mocks/custom-handlers/
+!mocks/custom-handlers/index.example.js
+```
+
+**4. Environment configuration:**
+
+Create `.env.local`:
 
 ```bash
-# Default: ws://localhost:6789
-export MCP_SERVER_URL=ws://localhost:3001
+ENABLE_MSW_MOCK=true
+ENABLE_MSW_WS_MOCK=true
+MCP_SERVER_URL=ws://localhost:6789
+```
+
+**5. Integrate with your app:**
+
+```javascript
+// src/main.js (or your app entry point)
+import { enableMocking } from '../mocks';
+
+async function startApp() {
+  await enableMocking();
+
+  // ... rest of your app initialization
+}
+
+startApp();
+```
+
+#### Client API Reference
+
+**`enableMocking(options)`**
+
+Main setup function that starts MSW worker and initializes WebSocket bridge.
+
+```typescript
+interface EnableMockingOptions {
+  worker: any; // MSW worker instance (required)
+  wsEnabled?: boolean; // Enable WebSocket bridge (default: true)
+  wsBridgeOptions?: {
+    url?: string; // WebSocket URL (default: ws://localhost:6789)
+    reconnectInterval?: number; // Reconnect delay in ms (default: 5000)
+    maxReconnectAttempts?: number; // Max reconnect attempts (default: 10)
+    enabled?: boolean; // Enable/disable bridge (default: true)
+  };
+  workerOptions?: {
+    onUnhandledRequest?: 'warn' | 'error' | 'bypass';
+    quiet?: boolean;
+    serviceWorker?: { url: string };
+  };
+}
+```
+
+**`createMSWBridge(worker, options?)`**
+
+Lower-level API to create just the WebSocket bridge without starting the worker.
+
+```typescript
+interface MSWBridgeOptions {
+  url?: string;
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  enabled?: boolean;
+}
 ```
 
 #### Features

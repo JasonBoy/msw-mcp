@@ -1,0 +1,3 @@
+# MSW local-only custom handlers
+mocks/custom-handlers/
+!mocks/custom-handlers/index.example.js

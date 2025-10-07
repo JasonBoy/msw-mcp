@@ -1,0 +1,39 @@
+import { enableMocking } from 'msw-mcp/client'
+import { worker } from './browser'
+
+export async function initMocks() {
+  // Only enable in development
+  if (process.env.NODE_ENV !== 'development') {
+    return
+  }
+
+  // Check if MSW is enabled via environment variable
+  const isMSWEnabled =
+    process.env.ENABLE_MSW_MOCK === '1' ||
+    process.env.ENABLE_MSW_MOCK === 'true'
+
+  if (!isMSWEnabled) {
+    console.log('[MSW] Mocking disabled via ENABLE_MSW_MOCK')
+    return
+  }
+
+  // Check if WebSocket bridge is enabled
+  const isWSEnabled =
+    process.env.ENABLE_MSW_WS_MOCK === '1' ||
+    process.env.ENABLE_MSW_WS_MOCK === 'true'
+
+  return enableMocking({
+    worker,
+    wsEnabled: isWSEnabled,
+    wsBridgeOptions: {
+      url: process.env.MCP_SERVER_URL || 'ws://localhost:6789'
+    },
+    workerOptions: {
+      onUnhandledRequest: 'bypass',
+      quiet: false,
+      serviceWorker: {
+        url: '/mockServiceWorker.js' // Adjust path if needed
+      }
+    }
+  })
+}

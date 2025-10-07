@@ -1,0 +1,16 @@
+import { http, HttpResponse, bypass } from 'msw'
+
+// Example custom handlers - copy this file to index.js to use
+// These handlers are gitignored and won't be committed
+export const handlers = [
+  // Example: Fetch original data and modify response
+  http.get('/api/example', async ({ request }) => {
+    const response = await fetch(bypass(request))
+    const originalData = await response.json()
+
+    return HttpResponse.json({
+      ...originalData,
+      ws_mocked: true
+    })
+  })
+]
