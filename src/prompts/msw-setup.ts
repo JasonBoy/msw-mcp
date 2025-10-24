@@ -86,17 +86,44 @@ Check if project uses TypeScript:
 
 ## NEW PROJECT MODE (No existing mocks/)
 
-### 1. Check Dependencies
-- Verify if \`msw\` is in package.json
-  - If NOT installed: Guide user to run \`npm install -D msw@^2.11.0\`
-- Verify if \`msw-mcp\` is in package.json
-  - If NOT installed: Guide user to run \`npm install -D msw-mcp\`
+### 1. Check and Install Dependencies
+
+**Check if dependencies are installed:**
+- Read package.json and check if \`msw\` exists in dependencies or devDependencies
+- Read package.json and check if \`msw-mcp\` exists in dependencies or devDependencies
+
+**If either is missing, ask user permission to install:**
+- Use AskUserQuestion tool to ask: "MSW setup requires installing dependencies. May I install them for you?"
+  - Options: "Yes, install automatically" / "No, I'll install manually"
+
+**If user approves automatic installation:**
+- Run npm install commands using Bash tool:
+  - If msw missing: \`npm install -D msw@^2.11.0\`
+  - If msw-mcp missing: \`npm install -D msw-mcp --registry http://localhost:4873/\` (use local registry)
+- Wait for installation to complete before proceeding
+
+**If user chooses manual installation:**
+- Tell user: "Please run: \`npm install -D msw@^2.11.0 msw-mcp --registry http://localhost:4873/\`"
+- Stop and wait for user to install dependencies
 
 ### 2. Initialize MSW Service Worker
+
+**Check if service worker exists:**
 - Check if \`mockServiceWorker.js\` exists in detected public directory
-- If NOT exists: Guide user to run \`npx msw init <public-dir>/ --save\`
+
+**If NOT exists, ask user permission:**
+- Use AskUserQuestion tool: "MSW service worker file not found. May I initialize it for you?"
+  - Options: "Yes, initialize automatically" / "No, I'll do it manually"
+
+**If user approves:**
+- Run using Bash tool: \`npx msw init <detected-public-dir>/ --save\`
   - Use detected public directory from step 1
   - Example: \`npx msw init static/ --save\` for Rspack with static/ directory
+- Wait for command to complete
+
+**If user declines:**
+- Tell user: "Please run: \`npx msw init <public-dir>/ --save\`"
+- Stop and wait for user to initialize
 
 ### 3. Create Complete Mocks Directory Structure
 
@@ -283,6 +310,7 @@ Copy the example file to prevent Vite/ESLint pre-compile errors:
 
 **For JavaScript:**
 \`\`\`javascript
+/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
 import { http, HttpResponse, bypass } from 'msw'
 
 // Custom handlers for local development only (gitignored)
@@ -298,6 +326,7 @@ export const handlers = [
 
 **For TypeScript:**
 \`\`\`typescript
+/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
 import { http, HttpResponse, bypass, type RequestHandler } from 'msw'
 
 // Custom handlers for local development only (gitignored)
@@ -326,7 +355,9 @@ mocks/custom-handlers/index.ts
 
 **Note**: This gitignores only the \`index.js/ts\` files while keeping \`index.example.js/ts\` in git.
 
-### 5. Create/Update Environment Files
+### 5. Create/Update Environment Files and Configure Bundler
+
+**Step 5a: Create/Update .env files**
 
 **.env.example**:
 \`\`\`bash
@@ -341,6 +372,75 @@ ENABLE_MSW_MOCK=true
 ENABLE_MSW_WS_MOCK=true
 MCP_SERVER_URL=ws://localhost:6789
 \`\`\`
+
+**Step 5b: Configure Bundler to Expose Environment Variables**
+
+Environment variables need to be explicitly exposed to frontend code. Configuration depends on detected build tool:
+
+**For Vite (\`vite.config.js/ts\`):**
+
+Option 1 - Use VITE_ prefix (recommended):
+- Rename variables in .env files:
+  - \`VITE_ENABLE_MSW_MOCK=true\`
+  - \`VITE_ENABLE_MSW_WS_MOCK=true\`
+  - \`VITE_MCP_SERVER_URL=ws://localhost:6789\`
+- Access in code: \`import.meta.env.VITE_ENABLE_MSW_MOCK\`
+- Update mocks/index.js to use \`import.meta.env.VITE_*\` instead of \`process.env.*\`
+
+Option 2 - Use define in config:
+\`\`\`javascript
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  define: {
+    'process.env.ENABLE_MSW_MOCK': JSON.stringify(process.env.ENABLE_MSW_MOCK),
+    'process.env.ENABLE_MSW_WS_MOCK': JSON.stringify(process.env.ENABLE_MSW_WS_MOCK),
+    'process.env.MCP_SERVER_URL': JSON.stringify(process.env.MCP_SERVER_URL),
+  }
+})
+\`\`\`
+
+**For Rspack (\`rspack.config.js\`):**
+
+Add environment variables to webpack.DefinePlugin:
+\`\`\`javascript
+const rspack = require('@rspack/core')
+
+module.exports = {
+  plugins: [
+    new rspack.DefinePlugin({
+      'process.env.ENABLE_MSW_MOCK': JSON.stringify(process.env.ENABLE_MSW_MOCK),
+      'process.env.ENABLE_MSW_WS_MOCK': JSON.stringify(process.env.ENABLE_MSW_WS_MOCK),
+      'process.env.MCP_SERVER_URL': JSON.stringify(process.env.MCP_SERVER_URL),
+    })
+  ]
+}
+\`\`\`
+
+**For Rsbuild (\`rsbuild.config.js/ts\`):**
+
+Use source.define or environments config:
+\`\`\`javascript
+import { defineConfig } from '@rsbuild/core'
+
+export default defineConfig({
+  source: {
+    define: {
+      'process.env.ENABLE_MSW_MOCK': JSON.stringify(process.env.ENABLE_MSW_MOCK),
+      'process.env.ENABLE_MSW_WS_MOCK': JSON.stringify(process.env.ENABLE_MSW_WS_MOCK),
+      'process.env.MCP_SERVER_URL': JSON.stringify(process.env.MCP_SERVER_URL),
+    }
+  }
+})
+\`\`\`
+
+**IMPORTANT Steps for Configuration:**
+1. Read the existing bundler config file
+2. Check if DefinePlugin or define is already configured
+3. If exists, merge new environment variables with existing ones
+4. If not exists, add new configuration
+5. Preserve existing config structure and comments
+6. Use Edit tool to update, NOT Write tool (to preserve existing config)
 
 ### 6. Integrate into App Entry Point
 
@@ -390,9 +490,22 @@ Ask user: "I found existing MSW setup. Would you like me to migrate to use msw-m
 - Update imports to use msw-mcp/client
 - Delete websocket-bridge.js (replaced by import)
 
-### 2. Check Dependencies
-- Verify \`msw-mcp\` is in package.json
-  - If NOT: Guide user to run \`npm install -D msw-mcp\`
+### 2. Check and Install Dependencies
+
+**Check if msw-mcp is installed:**
+- Read package.json and check if \`msw-mcp\` exists in dependencies or devDependencies
+
+**If msw-mcp is missing, ask user permission:**
+- Use AskUserQuestion tool: "Migration requires msw-mcp package. May I install it for you?"
+  - Options: "Yes, install automatically" / "No, I'll install manually"
+
+**If user approves:**
+- Run using Bash tool: \`npm install -D msw-mcp --registry http://localhost:4873/\`
+- Wait for installation to complete
+
+**If user declines:**
+- Tell user: "Please run: \`npm install -D msw-mcp --registry http://localhost:4873/\`"
+- Stop and wait for user to install
 
 ### 3. Migration Steps (if user confirms)
 
@@ -500,16 +613,43 @@ Tell user: "Migration complete! Your existing handlers are preserved. Test by ru
 
 ## Important Guidelines
 
+### Core Behavior
 - **Detect first** - Always read package.json first to detect build tool and TypeScript
 - **Detect publicPath** - Read bundler config file to find publicPath for service worker URL
 - **Use correct extensions** - Generate .ts files for TypeScript projects, .js for JavaScript
 - **Be concise** - Execute tasks directly without excessive explanation
 - **Auto-detect framework** - Check package.json for react/vue/svelte/etc
+- **Preserve user code** - In migration mode, NEVER modify handlers.js/ts or custom-handlers/
+- **Configure bundler for env vars** - MUST update bundler config to expose environment variables to frontend code (Step 5b is mandatory)
+
+### Tool Usage
 - **Use Write tool** - Create files using Write tool, NOT bash/echo commands
 - **Check before creating** - Use Read to check if files exist before overwriting
-- **Preserve user code** - In migration mode, NEVER modify handlers.js/ts or custom-handlers/
 - **Adapt paths** - Adjust service worker path and public directory based on detected build tool
 - **TypeScript imports** - Use proper type imports in .ts files (e.g., \`type RequestHandler\`)
+- **Edit bundler config** - ALWAYS use Edit tool (not Write) to update bundler config files to preserve existing configuration
+
+### Environment Variable Configuration (Critical!)
+- **MUST configure bundler** - Adding to .env files alone is NOT enough
+- **Read config first** - Always read the existing bundler config file before modifying
+- **Merge, don't replace** - If DefinePlugin/define already exists, merge new env vars with existing ones
+- **For Vite** - Prefer VITE_ prefix method, update mocks/index.js to use \`import.meta.env\`
+- **For Rspack** - Add to DefinePlugin in plugins array
+- **For Rsbuild** - Add to source.define object
+- **Verify after edit** - Explain to user which config was updated and how to verify env vars are accessible
+
+### Automatic Installation
+- **Ask permission first** - ALWAYS use AskUserQuestion tool before running npm/npx commands
+- **Use Bash tool** - Run npm install and npx commands using Bash tool (NOT just telling user)
+- **Wait for completion** - Wait for Bash commands to complete before proceeding
+- **Handle errors** - If installation fails, show error and ask user how to proceed
+- **Local registry** - Always use \`--registry http://localhost:4873/\` for msw-mcp package
+- **Example permission question**:
+  - Question: "MSW setup requires installing dependencies. May I install them for you?"
+  - Options: "Yes, install automatically" / "No, I'll install manually"
+  - Use multiSelect: false
+
+### Path Handling
 - **Handle slashes** - When constructing service worker URL, normalize publicPath first:
   - Strip trailing slash: \`/app/\` → \`/app\`
   - Then concatenate: \`/app\` + \`/mockServiceWorker.js\` → \`/app/mockServiceWorker.js\`
@@ -517,12 +657,18 @@ Tell user: "Migration complete! Your existing handlers are preserved. Test by ru
 
 ## Detection Steps Summary
 
-1. Read package.json → Detect build tool
+1. Read package.json → Detect build tool and TypeScript
 2. Read bundler config file → Extract publicPath
-3. Check for tsconfig.json → Detect TypeScript
-4. Check for mocks/ directory → Determine setup mode
-5. Construct service worker URL with detected publicPath
-6. Generate files with correct extensions and paths
+3. Check for tsconfig.json (if not already done) → Confirm TypeScript
+4. Check for mocks/ directory → Determine setup mode (NEW vs MIGRATION)
+5. Install dependencies (if missing, with user permission)
+6. Create/update .env files
+7. **CRITICAL**: Update bundler config to expose environment variables
+8. Construct service worker URL with detected publicPath
+9. Generate mocks/ files with correct extensions and paths
+10. Integrate into app entry point
+
+**Remember:** Steps 6-7 (env files + bundler config) must both be completed for environment variables to work!
 
 Begin setup now by reading package.json to detect build tool and TypeScript support.`,
             },
