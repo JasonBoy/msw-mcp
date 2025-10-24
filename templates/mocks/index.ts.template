@@ -1,7 +1,7 @@
 import { initMocking } from 'msw-mcp/client'
 import { worker } from './browser'
 
-export async function initMocks() {
+export async function initMocks(): Promise<void> {
   // Only enable in development
   if (process.env.NODE_ENV !== 'development') {
     return
@@ -22,7 +22,7 @@ export async function initMocks() {
     process.env.ENABLE_MSW_WS_MOCK === '1' ||
     process.env.ENABLE_MSW_WS_MOCK === 'true'
 
-  return initMocking({
+  await initMocking({
     worker,
     wsEnabled: isWSEnabled,
     wsBridgeOptions: {

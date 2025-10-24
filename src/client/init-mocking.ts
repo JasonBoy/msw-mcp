@@ -1,6 +1,6 @@
 import { createMSWBridge, type MSWBridgeOptions } from './websocket-bridge.js';
 
-export interface EnableMockingOptions {
+export interface InitMockingOptions {
   worker: any; // MSW worker instance (required)
   wsEnabled?: boolean; // Enable WebSocket bridge (default: true)
   wsBridgeOptions?: MSWBridgeOptions; // WebSocket bridge configuration
@@ -14,9 +14,7 @@ export interface EnableMockingOptions {
   };
 }
 
-export async function enableMocking(
-  options: EnableMockingOptions,
-): Promise<any> {
+export async function initMocking(options: InitMockingOptions): Promise<any> {
   // Only run in development mode
   if (
     typeof process !== 'undefined' &&

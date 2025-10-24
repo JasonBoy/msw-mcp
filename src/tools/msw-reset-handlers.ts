@@ -13,7 +13,10 @@ export function createMSWResetHandlersTool(
         .array(z.string())
         .optional()
         .describe(
-          'Optional array of MSW handler JavaScript code strings to set as new handlers. If omitted, resets to initial handlers only.',
+          'Optional array of MSW handler JavaScript code strings to set as new handlers. If omitted, resets to initial handlers only. Examples:\n' +
+            '1. Simple mock: "http.get(\'/users\', () => HttpResponse.json([]))"\n' +
+            '2. With request body: "http.post(\'/users\', async ({request}) => { const body = await request.json(); return HttpResponse.json({id: 1, ...body}) })"\n' +
+            '3. Fetch real API then modify: "http.get(\'/api/data\', async ({request}) => { const response = await fetch(bypass(request)); const data = await response.json(); return HttpResponse.json({...data, mocked: true}) })"',
         ),
     },
     handler: async ({ handlers }: { handlers?: string[] | undefined }) => {
@@ -27,6 +30,40 @@ export function createMSWResetHandlersTool(
               },
             ],
           };
+        }
+
+        // Validate handler code if handlers are provided
+        if (handlers && handlers.length > 0) {
+          for (let i = 0; i < handlers.length; i++) {
+            const handler = handlers[i];
+            if (!handler) continue;
+
+            // Check if contains fetch(request) but not bypass(request)
+            const hasFetchRequest = /fetch\s*\(\s*request\s*\)/.test(handler);
+            const hasBypass = /bypass\s*\(\s*request\s*\)/.test(handler);
+
+            if (hasFetchRequest && !hasBypass) {
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text:
+                      `Error: Handler ${i + 1} contains fetch(request) without using bypass().\n\n` +
+                      `❌ Incorrect usage: await fetch(request)\n` +
+                      `✅ Correct usage: await fetch(bypass(request))\n\n` +
+                      `Explanation: Using fetch(request) directly in MSW handlers causes infinite loops because MSW intercepts the request again.\n` +
+                      `You must use bypass(request) to bypass MSW interception and access the real API.\n\n` +
+                      `Example:\n` +
+                      `http.get('/api/data', async ({request}) => {\n` +
+                      `  const response = await fetch(bypass(request));\n` +
+                      `  const data = await response.json();\n` +
+                      `  return HttpResponse.json({...data, mocked: true});\n` +
+                      `})`,
+                  },
+                ],
+              };
+            }
+          }
         }
 
         const response = await connectionManager.sendMessage({

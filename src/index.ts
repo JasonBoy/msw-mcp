@@ -168,7 +168,9 @@ const setupPrompt = createMSWSetupPrompt();
 server.registerPrompt(
   setupPrompt.name,
   {
-    title: 'Setup MSW Mocking',
+    // Claude Code currently requires title to be without spaces
+    // title: 'Setup MSW Mocking',
+    title: 'msw-setup',
     description: setupPrompt.description,
   },
   setupPrompt.getPrompt,
