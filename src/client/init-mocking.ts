@@ -1,5 +1,43 @@
 import { createMSWBridge, type MSWBridgeOptions } from './websocket-bridge.js';
 
+async function ensureMSWGlobals(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const globalScope = window as unknown as {
+    msw?: Record<string, unknown>;
+  };
+
+  const hasRequiredExports = Boolean(
+    globalScope.msw && (globalScope.msw.http || globalScope.msw.HttpResponse),
+  );
+
+  if (hasRequiredExports) {
+    return;
+  }
+
+  try {
+    // @ts-expect-error msw is provided by the host app at runtime
+    const mswExports = (await import('msw')) as Record<string, unknown>;
+
+    // Preserve any existing values while ensuring the required exports are present.
+    globalScope.msw = {
+      ...(globalScope.msw || {}),
+      ...mswExports,
+      http: mswExports.http ?? globalScope.msw?.http,
+      HttpResponse: mswExports.HttpResponse ?? globalScope.msw?.HttpResponse,
+      bypass: mswExports.bypass ?? globalScope.msw?.bypass,
+      passthrough: mswExports.passthrough ?? globalScope.msw?.passthrough,
+      delay: mswExports.delay ?? globalScope.msw?.delay,
+    };
+
+    console.log('[MSW] Exposed MSW exports on window for dynamic handlers');
+  } catch (error) {
+    console.warn('[MSW] Failed to expose MSW exports on window:', error);
+  }
+}
+
 export interface InitMockingOptions {
   worker: any; // MSW worker instance (required)
   wsEnabled?: boolean; // Enable WebSocket bridge (default: true)
@@ -46,6 +84,8 @@ export async function initMocking(options: InitMockingOptions): Promise<any> {
   // Initialize WebSocket bridge if enabled
   if (wsEnabled) {
     try {
+      await ensureMSWGlobals();
+
       const bridge = createMSWBridge(worker, wsBridgeOptions);
 
       if (bridge && typeof window !== 'undefined') {
