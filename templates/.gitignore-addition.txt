@@ -1,3 +1,0 @@
-# MSW local-only custom handlers
-mocks/custom-handlers/index.js
-mocks/custom-handlers/index.ts

@@ -176,7 +176,13 @@ export const handlers: RequestHandler[] = [...baseHandlers, ...customHandlers]
 **For JavaScript Projects (mocks/browser.js):**
 \`\`\`javascript
 import { setupWorker } from 'msw/browser'
+import * as msw from 'msw'
 import { handlers } from './handlers'
+
+// Expose MSW on window for msw-mcp client bridge
+if (typeof window !== 'undefined') {
+  window.msw = msw
+}
 
 export const worker = setupWorker(...handlers)
 \`\`\`
@@ -184,9 +190,29 @@ export const worker = setupWorker(...handlers)
 **For TypeScript Projects (mocks/browser.ts):**
 \`\`\`typescript
 import { setupWorker } from 'msw/browser'
+import * as msw from 'msw'
 import { handlers } from './handlers'
 
+// Expose MSW on window for msw-mcp client bridge
+if (typeof window !== 'undefined') {
+  window.msw = msw
+}
+
 export const worker = setupWorker(...handlers)
+\`\`\`
+
+**For TypeScript Projects (mocks/types.d.ts):**
+\`\`\`typescript
+import type * as msw from 'msw'
+
+declare global {
+  interface Window {
+    msw: typeof msw
+    __mswBridge?: any
+  }
+}
+
+export {}
 \`\`\`
 
 **For JavaScript Projects (mocks/index.js):**
@@ -470,6 +496,7 @@ Tell user:
 Files created:
 - mocks/handlers.{js/ts} - Base handlers (committed)
 - mocks/browser.{js/ts} - Worker setup
+- mocks/types.d.ts - TypeScript declarations (TS projects only)
 - mocks/index.{js/ts} - Initialization
 - mocks/custom-handlers/index.example.{js/ts} - Example handlers
 - mocks/custom-handlers/index.{js/ts} - Your local handlers (gitignored, ready to use)
