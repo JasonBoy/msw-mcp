@@ -99,11 +99,11 @@ Check if project uses TypeScript:
 **If user approves automatic installation:**
 - Run npm install commands using Bash tool:
   - If msw missing: \`npm install -D msw@^2.11.0\`
-  - If msw-mcp missing: \`npm install -D msw-mcp --registry http://localhost:4873/\` (use local registry)
+  - If msw-mcp missing: \`npm install -D msw-mcp\`
 - Wait for installation to complete before proceeding
 
 **If user chooses manual installation:**
-- Tell user: "Please run: \`npm install -D msw@^2.11.0 msw-mcp --registry http://localhost:4873/\`"
+- Tell user: "Please run: \`npm install -D msw@^2.11.0 msw-mcp\`"
 - Stop and wait for user to install dependencies
 
 ### 2. Initialize MSW Service Worker
@@ -145,7 +145,7 @@ try {
   const customModule = await import('./custom-handlers/index.js')
   customHandlers = customModule.handlers || []
 } catch (error) {
-  console.log('[MSW] No custom handlers found (this is normal)')
+  console.warn('[MSW] Error loading custom handlers:', error)
 }
 
 export const handlers = [...baseHandlers, ...customHandlers]
@@ -167,7 +167,9 @@ try {
   const customModule = await import('./custom-handlers/index.js')
   customHandlers = customModule.handlers || []
 } catch (error) {
-  console.log('[MSW] No custom handlers found (this is normal)')
+  if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+    console.warn('[MSW] Error loading custom handlers:', error)
+  }
 }
 
 export const handlers: RequestHandler[] = [...baseHandlers, ...customHandlers]
@@ -527,11 +529,11 @@ Ask user: "I found existing MSW setup. Would you like me to migrate to use msw-m
   - Options: "Yes, install automatically" / "No, I'll install manually"
 
 **If user approves:**
-- Run using Bash tool: \`npm install -D msw-mcp --registry http://localhost:4873/\`
+- Run using Bash tool: \`npm install -D msw-mcp\`
 - Wait for installation to complete
 
 **If user declines:**
-- Tell user: "Please run: \`npm install -D msw-mcp --registry http://localhost:4873/\`"
+- Tell user: "Please run: \`npm install -D msw-mcp\`"
 - Stop and wait for user to install
 
 ### 3. Migration Steps (if user confirms)
@@ -670,7 +672,6 @@ Tell user: "Migration complete! Your existing handlers are preserved. Test by ru
 - **Use Bash tool** - Run npm install and npx commands using Bash tool (NOT just telling user)
 - **Wait for completion** - Wait for Bash commands to complete before proceeding
 - **Handle errors** - If installation fails, show error and ask user how to proceed
-- **Local registry** - Always use \`--registry http://localhost:4873/\` for msw-mcp package
 - **Example permission question**:
   - Question: "MSW setup requires installing dependencies. May I install them for you?"
   - Options: "Yes, install automatically" / "No, I'll install manually"
