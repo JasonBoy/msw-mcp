@@ -180,9 +180,16 @@ server.registerPrompt(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(
-    `MSW MCP Server running on stdio with WebSocket server on port ${port}`,
-  );
+
+  if (wsServer.isServerActive()) {
+    console.error(
+      `MSW MCP Server running on stdio with WebSocket server on port ${port}`,
+    );
+  } else {
+    console.error(
+      `MSW MCP Server running on stdio (WebSocket server on port ${port} is managed by another instance)`,
+    );
+  }
 }
 
 // Graceful shutdown
