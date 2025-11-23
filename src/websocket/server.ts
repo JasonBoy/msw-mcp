@@ -54,6 +54,14 @@ export class WSServer {
       this.wss.on('connection', (ws) => {
         console.error('✅ Browser client connected to WebSocket');
         this.connectionManager.addClient(ws);
+
+        // Send welcome message to confirm connection is stable
+        ws.send(
+          JSON.stringify({
+            id: 'welcome',
+            type: 'WELCOME',
+          }),
+        );
       });
 
       // Handle async listen errors - only need to handle on HTTP server

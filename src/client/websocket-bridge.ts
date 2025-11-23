@@ -85,7 +85,7 @@ export class MSWWebSocketBridge {
     this.ws.onopen = () => {
       console.log('[MSW Bridge] Connected to MCP server');
       this.isConnecting = false;
-      this.reconnectAttempts = 0;
+      // Don't reset reconnectAttempts here - only reset after stable connection confirmed
     };
 
     this.ws.onmessage = (event) => {
@@ -141,6 +141,17 @@ export class MSWWebSocketBridge {
 
   private handleMessage(message: WSMessage): void {
     console.log('[MSW Bridge] Received message:', message);
+
+    // Handle welcome message (confirms stable connection)
+    if (message.type === 'WELCOME') {
+      if (this.reconnectAttempts > 0) {
+        console.log(
+          '[MSW Bridge] Connection stable, resetting reconnect counter',
+        );
+        this.reconnectAttempts = 0;
+      }
+      return;
+    }
 
     // Update persistence config if provided by server
     if (message.persist !== undefined) {

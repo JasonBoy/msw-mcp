@@ -17,7 +17,8 @@ export type WSMessageType =
   | 'GET_STATUS'
   | 'SUCCESS'
   | 'ERROR'
-  | 'STATUS_RESPONSE';
+  | 'STATUS_RESPONSE'
+  | 'WELCOME';
 
 export interface WSResponse extends WSMessage {
   type: 'SUCCESS' | 'ERROR' | 'STATUS_RESPONSE';
