@@ -1,6 +1,6 @@
-import { ConnectionManager } from '../websocket/connection-manager.js';
+import type { WSServer } from '../websocket/server.js';
 
-export function createMSWGetStatusTool(connectionManager: ConnectionManager) {
+export function createMSWGetStatusTool(wsServer: WSServer) {
   return {
     name: 'msw_get_status',
     description:
@@ -8,29 +8,7 @@ export function createMSWGetStatusTool(connectionManager: ConnectionManager) {
     inputSchema: {},
     handler: async () => {
       try {
-        const localStatus = connectionManager.getStatus();
-
-        if (!connectionManager.hasConnectedClients()) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: JSON.stringify(
-                  {
-                    connected: false,
-                    workerStatus: 'disconnected',
-                    activeHandlers: [],
-                    message: 'No browser clients connected',
-                  },
-                  null,
-                  2,
-                ),
-              },
-            ],
-          };
-        }
-
-        const response = await connectionManager.sendMessage({
+        const response = await wsServer.sendMessage({
           id: '', // Will be set by sendMessage
           type: 'GET_STATUS',
         });

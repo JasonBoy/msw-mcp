@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { ConnectionManager } from '../websocket/connection-manager.js';
+import type { WSServer } from '../websocket/server.js';
 
-export function createMSWAddHandlersTool(connectionManager: ConnectionManager) {
+export function createMSWAddHandlersTool(wsServer: WSServer) {
   return {
     name: 'msw_add_handlers',
     description:
@@ -30,17 +30,6 @@ export function createMSWAddHandlersTool(connectionManager: ConnectionManager) {
       once?: boolean | undefined;
     }) => {
       try {
-        if (!connectionManager.hasConnectedClients()) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: 'Error: No browser clients connected. Make sure the MSW service worker is running and connected.',
-              },
-            ],
-          };
-        }
-
         // Validate handler code: check for incorrect fetch(request) usage without bypass()
         for (let i = 0; i < handlers.length; i++) {
           const handler = handlers[i];
@@ -73,7 +62,7 @@ export function createMSWAddHandlersTool(connectionManager: ConnectionManager) {
           }
         }
 
-        const response = await connectionManager.sendMessage({
+        const response = await wsServer.sendMessage({
           id: '', // Will be set by sendMessage
           type: 'ADD_HANDLERS',
           handlers,

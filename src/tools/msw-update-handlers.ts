@@ -1,9 +1,7 @@
 import { z } from 'zod';
-import { ConnectionManager } from '../websocket/connection-manager.js';
+import type { WSServer } from '../websocket/server.js';
 
-export function createMSWUpdateHandlersTool(
-  connectionManager: ConnectionManager,
-) {
+export function createMSWUpdateHandlersTool(wsServer: WSServer) {
   return {
     name: 'msw_update_handlers',
     description:
@@ -31,17 +29,6 @@ export function createMSWUpdateHandlersTool(
       handlers: string[];
     }) => {
       try {
-        if (!connectionManager.hasConnectedClients()) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: 'Error: No browser clients connected. Make sure the MSW service worker is running and connected.',
-              },
-            ],
-          };
-        }
-
         // Validate handler code: check for incorrect fetch(request) usage without bypass()
         for (let i = 0; i < handlers.length; i++) {
           const handler = handlers[i];
@@ -74,7 +61,7 @@ export function createMSWUpdateHandlersTool(
           }
         }
 
-        const response = await connectionManager.sendMessage({
+        const response = await wsServer.sendMessage({
           id: '', // Will be set by sendMessage
           type: 'UPDATE_HANDLERS',
           patterns,

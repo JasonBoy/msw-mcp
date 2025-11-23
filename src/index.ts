@@ -43,13 +43,13 @@ function parseArgs() {
         const parsed = parseInt(value, 10);
         if (isNaN(parsed) || parsed <= 0) {
           console.error(
-            `Invalid --persist-handlers value: ${value} (must be positive integer)`,
+            `❌ Invalid --persist-handlers value: ${value} (must be positive integer)`,
           );
           process.exit(1);
         }
         persistLimit = parsed;
       } else {
-        console.error('Missing value after --persist-handlers=');
+        console.error('❌ Missing value after --persist-handlers=');
         process.exit(1);
       }
       continue;
@@ -63,7 +63,7 @@ function parseArgs() {
         if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort <= 65535) {
           port = parsedPort;
         } else {
-          console.error(`Invalid port number: ${portStr}`);
+          console.error(`❌ Invalid port number: ${portStr}`);
           process.exit(1);
         }
       }
@@ -79,11 +79,11 @@ function parseArgs() {
         if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort <= 65535) {
           port = parsedPort;
         } else {
-          console.error(`Invalid port number: ${portStr}`);
+          console.error(`❌ Invalid port number: ${portStr}`);
           process.exit(1);
         }
       } else {
-        console.error('Missing port number after --mock-ws-port=');
+        console.error('❌ Missing port number after --mock-ws-port=');
         process.exit(1);
       }
       continue;
@@ -105,10 +105,9 @@ const wsServer = new WSServer(port, singleClient, {
   persistHandlers,
   persistLimit,
 });
-const connectionManager = wsServer.getConnectionManager();
 
 // Register MSW tools
-const addHandlersTool = createMSWAddHandlersTool(connectionManager);
+const addHandlersTool = createMSWAddHandlersTool(wsServer);
 server.registerTool(
   addHandlersTool.name,
   {
@@ -119,7 +118,7 @@ server.registerTool(
   addHandlersTool.handler,
 );
 
-const resetHandlersTool = createMSWResetHandlersTool(connectionManager);
+const resetHandlersTool = createMSWResetHandlersTool(wsServer);
 server.registerTool(
   resetHandlersTool.name,
   {
@@ -130,7 +129,7 @@ server.registerTool(
   resetHandlersTool.handler,
 );
 
-const removeHandlersTool = createMSWRemoveHandlersTool(connectionManager);
+const removeHandlersTool = createMSWRemoveHandlersTool(wsServer);
 server.registerTool(
   removeHandlersTool.name,
   {
@@ -141,7 +140,7 @@ server.registerTool(
   removeHandlersTool.handler,
 );
 
-const updateHandlersTool = createMSWUpdateHandlersTool(connectionManager);
+const updateHandlersTool = createMSWUpdateHandlersTool(wsServer);
 server.registerTool(
   updateHandlersTool.name,
   {
@@ -152,7 +151,7 @@ server.registerTool(
   updateHandlersTool.handler,
 );
 
-const getStatusTool = createMSWGetStatusTool(connectionManager);
+const getStatusTool = createMSWGetStatusTool(wsServer);
 server.registerTool(
   getStatusTool.name,
   {
@@ -183,24 +182,24 @@ async function main() {
 
   if (wsServer.isServerActive()) {
     console.error(
-      `MSW MCP Server running on stdio with WebSocket server on port ${port}`,
+      `✅ MSW MCP Server running on stdio with WebSocket server on port ${port}`,
     );
   } else {
     console.error(
-      `MSW MCP Server running on stdio (WebSocket server on port ${port} is managed by another instance)`,
+      `ℹ️  MSW MCP Server running on stdio (WebSocket server on port ${port} is managed by another instance)`,
     );
   }
 }
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.error('Shutting down MSW MCP Server...');
+  console.error('ℹ️  Shutting down MSW MCP Server...');
   wsServer.close();
   process.exit(0);
 });
 
 main().catch((error) => {
-  console.error('Server error:', error);
+  console.error('❌ Server error:', error);
   wsServer.close();
   process.exit(1);
 });

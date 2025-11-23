@@ -1,9 +1,7 @@
 import { z } from 'zod';
-import { ConnectionManager } from '../websocket/connection-manager.js';
+import type { WSServer } from '../websocket/server.js';
 
-export function createMSWResetHandlersTool(
-  connectionManager: ConnectionManager,
-) {
+export function createMSWResetHandlersTool(wsServer: WSServer) {
   return {
     name: 'msw_reset_handlers',
     description:
@@ -21,17 +19,6 @@ export function createMSWResetHandlersTool(
     },
     handler: async ({ handlers }: { handlers?: string[] | undefined }) => {
       try {
-        if (!connectionManager.hasConnectedClients()) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: 'Error: No browser clients connected. Make sure the MSW service worker is running and connected.',
-              },
-            ],
-          };
-        }
-
         // Validate handler code if handlers are provided
         if (handlers && handlers.length > 0) {
           for (let i = 0; i < handlers.length; i++) {
@@ -66,7 +53,7 @@ export function createMSWResetHandlersTool(
           }
         }
 
-        const response = await connectionManager.sendMessage({
+        const response = await wsServer.sendMessage({
           id: '', // Will be set by sendMessage
           type: 'RESET_HANDLERS',
           handlers: handlers || undefined,

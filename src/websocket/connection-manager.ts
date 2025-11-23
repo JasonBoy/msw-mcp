@@ -38,7 +38,7 @@ export class ConnectionManager {
           this.pendingRequests.delete(response.id);
         }
       } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
+        console.error('❌ Failed to parse WebSocket message:', error);
       }
     });
 

@@ -1,9 +1,7 @@
 import { z } from 'zod';
-import { ConnectionManager } from '../websocket/connection-manager.js';
+import type { WSServer } from '../websocket/server.js';
 
-export function createMSWRemoveHandlersTool(
-  connectionManager: ConnectionManager,
-) {
+export function createMSWRemoveHandlersTool(wsServer: WSServer) {
   return {
     name: 'msw_remove_handlers',
     description:
@@ -17,18 +15,7 @@ export function createMSWRemoveHandlersTool(
     },
     handler: async ({ patterns }: { patterns: string[] }) => {
       try {
-        if (!connectionManager.hasConnectedClients()) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: 'Error: No browser clients connected. Make sure the MSW service worker is running and connected.',
-              },
-            ],
-          };
-        }
-
-        const response = await connectionManager.sendMessage({
+        const response = await wsServer.sendMessage({
           id: '', // Will be set by sendMessage
           type: 'REMOVE_HANDLERS',
           patterns,
