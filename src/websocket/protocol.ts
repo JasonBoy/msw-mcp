@@ -3,6 +3,7 @@ export interface WSMessage {
   type: WSMessageType;
   handlers?: string[] | undefined;
   patterns?: string[] | undefined;
+  methods?: string[] | undefined;
   once?: boolean | undefined;
   persist?: boolean | undefined;
   persistLimit?: number | null | undefined;

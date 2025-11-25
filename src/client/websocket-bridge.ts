@@ -11,6 +11,7 @@ interface WSMessage {
   type: string;
   handlers?: string[];
   patterns?: string[];
+  methods?: string[];
   once?: boolean;
   persist?: boolean;
   persistLimit?: number | null;
@@ -182,7 +183,7 @@ export class MSWWebSocketBridge {
           break;
 
         case 'REMOVE_HANDLERS':
-          this.removeHandlers(message.patterns || []);
+          this.removeHandlers(message.patterns || [], message.methods);
           break;
 
         case 'UPDATE_HANDLERS':
@@ -313,19 +314,41 @@ export class MSWWebSocketBridge {
     }
   }
 
-  private removeHandlers(patterns: string[]): void {
-    console.log('[MSW Bridge] Removing handlers matching patterns:', patterns);
+  private removeHandlers(patterns: string[], methods?: string[]): void {
+    console.log(
+      '[MSW Bridge] Removing handlers matching patterns:',
+      patterns,
+      methods ? `with methods: ${methods.join(', ')}` : '(all methods)',
+    );
 
     const handlersToRemove: Array<{ handlerString: string; handler: any }> = [];
 
     for (const [handlerString, handler] of this.activeHandlers.entries()) {
+      // Extract method from handler string
+      const methodMatch = handlerString.match(
+        /http\.(get|post|put|delete|patch|options|head|all)/i,
+      );
+      const handlerMethod = methodMatch ? methodMatch[1].toUpperCase() : null;
+
       for (const pattern of patterns) {
         if (
           handlerString.includes(pattern) ||
           this.matchesPattern(handlerString, pattern)
         ) {
-          handlersToRemove.push({ handlerString, handler });
-          break;
+          // If methods filter is provided, only remove if method matches
+          if (methods && methods.length > 0) {
+            if (
+              handlerMethod &&
+              methods.some((m) => m.toUpperCase() === handlerMethod)
+            ) {
+              handlersToRemove.push({ handlerString, handler });
+              break;
+            }
+          } else {
+            // No method filter, remove all matching patterns
+            handlersToRemove.push({ handlerString, handler });
+            break;
+          }
         }
       }
     }
