@@ -148,7 +148,8 @@ try {
   console.warn('[MSW] Error loading custom handlers:', error)
 }
 
-export const handlers = [...baseHandlers, ...customHandlers]
+// Custom handlers first - they take precedence over base handlers
+export const handlers = [...customHandlers, ...baseHandlers]
 \`\`\`
 
 **For TypeScript Projects (mocks/handlers.ts):**
@@ -172,7 +173,8 @@ try {
   }
 }
 
-export const handlers: RequestHandler[] = [...baseHandlers, ...customHandlers]
+// Custom handlers first - they take precedence over base handlers
+export const handlers: RequestHandler[] = [...customHandlers, ...baseHandlers]
 \`\`\`
 
 **For JavaScript Projects (mocks/browser.js):**
