@@ -20,13 +20,21 @@ export function createMSWUpdateHandlersTool(wsServer: WSServer) {
             '2. With request body: "http.post(\'/users\', async ({request}) => { const body = await request.json(); return HttpResponse.json({id: 1, ...body}) })"\n' +
             '3. Fetch real API then modify: "http.get(\'/api/data\', async ({request}) => { const response = await fetch(bypass(request)); const data = await response.json(); return HttpResponse.json({...data, mocked: true}) })"',
         ),
+      methods: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Optional array of HTTP methods to filter by (e.g., ["GET", "POST"]). If not provided, updates all methods for the pattern.',
+        ),
     },
     handler: async ({
       patterns,
       handlers,
+      methods,
     }: {
       patterns: string[];
       handlers: string[];
+      methods?: string[] | undefined;
     }) => {
       try {
         // Validate handler code: check for incorrect fetch(request) usage without bypass()
@@ -66,14 +74,16 @@ export function createMSWUpdateHandlersTool(wsServer: WSServer) {
           type: 'UPDATE_HANDLERS',
           patterns,
           handlers,
+          methods,
         });
 
         if (response.type === 'SUCCESS') {
+          const methodInfo = methods ? ` (methods: ${methods.join(', ')})` : '';
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `Successfully updated handlers matching patterns: ${patterns.join(', ')}. Replaced with ${handlers.length} new handler(s). Active handlers: ${response.activeHandlers?.length || 0}`,
+                text: `Successfully updated handlers matching patterns: ${patterns.join(', ')}${methodInfo}. Replaced with ${handlers.length} new handler(s). Active handlers: ${response.activeHandlers?.length || 0}`,
               },
             ],
           };

@@ -187,7 +187,11 @@ export class MSWWebSocketBridge {
           break;
 
         case 'UPDATE_HANDLERS':
-          this.updateHandlers(message.patterns || [], message.handlers || []);
+          this.updateHandlers(
+            message.patterns || [],
+            message.handlers || [],
+            message.methods,
+          );
           break;
 
         case 'GET_STATUS':
@@ -374,8 +378,13 @@ export class MSWWebSocketBridge {
   private updateHandlers(
     patterns: string[],
     newHandlerStrings: string[],
+    methods?: string[],
   ): void {
-    console.log('[MSW Bridge] Updating handlers matching patterns:', patterns);
+    console.log(
+      '[MSW Bridge] Updating handlers matching patterns:',
+      patterns,
+      methods ? `with methods: ${methods.join(', ')}` : '(all methods)',
+    );
 
     // Import MSW at runtime (peer dependency)
     const msw = (window as any).msw || {};
@@ -389,13 +398,31 @@ export class MSWWebSocketBridge {
     const handlersToRemove: Array<{ handlerString: string; handler: any }> = [];
 
     for (const [handlerString, handler] of this.activeHandlers.entries()) {
+      // Extract method from handler string
+      const methodMatch = handlerString.match(
+        /http\.(get|post|put|delete|patch|options|head|all)/i,
+      );
+      const handlerMethod = methodMatch ? methodMatch[1].toUpperCase() : null;
+
       for (const pattern of patterns) {
         if (
           handlerString.includes(pattern) ||
           this.matchesPattern(handlerString, pattern)
         ) {
-          handlersToRemove.push({ handlerString, handler });
-          break;
+          // If methods filter is provided, only remove if method matches
+          if (methods && methods.length > 0) {
+            if (
+              handlerMethod &&
+              methods.some((m) => m.toUpperCase() === handlerMethod)
+            ) {
+              handlersToRemove.push({ handlerString, handler });
+              break;
+            }
+          } else {
+            // No method filter, remove all matching patterns
+            handlersToRemove.push({ handlerString, handler });
+            break;
+          }
         }
       }
     }
