@@ -119,6 +119,44 @@ Add new MSW request handlers to the browser service worker at runtime.
 
 After the first request to `/one-time-resource`, the handler will be automatically deactivated and subsequent requests will pass through to the real API.
 
+### Handler Priority and Ordering
+
+**Important:** MSW evaluates handlers in the order they appear in the array. The **first matching handler wins**.
+
+**Handler Order:**
+
+```javascript
+// ✅ Correct: Custom handlers (specific) before base handlers (general)
+export const handlers = [...customHandlers, ...baseHandlers];
+
+// ❌ Wrong: Base handlers would intercept before custom ones
+export const handlers = [...baseHandlers, ...customHandlers];
+```
+
+**Example:**
+
+```javascript
+const handlers = [
+  // This matches first - specific override
+  http.get('/api/users/123', () =>
+    HttpResponse.json({ id: 123, special: true }),
+  ),
+
+  // This would match second - general fallback
+  http.get('/api/users/:id', () =>
+    HttpResponse.json({ id: 1, name: 'Default' }),
+  ),
+];
+```
+
+When requesting `/api/users/123`, the first handler matches and returns `{ special: true }`. If the order were reversed, the second handler would match and the first would never execute.
+
+**Best Practices:**
+
+- Place more specific patterns before general ones
+- Place custom/override handlers before base handlers
+- Use the `methods` parameter in `msw_update_handlers` and `msw_remove_handlers` to target specific HTTP methods when you have multiple handlers for the same URL
+
 ### `msw_reset_handlers`
 
 Reset MSW handlers. Optionally provide new handlers to replace all existing ones.
@@ -133,14 +171,33 @@ Reset MSW handlers. Optionally provide new handlers to replace all existing ones
 
 ### `msw_remove_handlers`
 
-Remove specific handlers by URL patterns.
+Remove specific handlers by URL patterns and optional HTTP methods.
 
 **Input:**
 
 ```json
 {
-  "patterns": ["/users", "/api/v1/*", "https://api.example.com/*"]
+  "patterns": ["/users", "/api/v1/*", "https://api.example.com/*"],
+  "methods": ["GET", "POST"] // Optional: filter by HTTP methods
 }
+```
+
+**Parameters:**
+
+- `patterns` (required): Array of URL patterns to match
+- `methods` (optional): Array of HTTP methods to filter by (e.g., `["GET", "POST"]`). If omitted, removes all methods matching the pattern.
+
+**Examples:**
+
+```json
+// Remove all handlers for /users (any method)
+{ "patterns": ["/users"] }
+
+// Remove only GET handlers for /users
+{ "patterns": ["/users"], "methods": ["GET"] }
+
+// Remove GET and POST handlers for multiple patterns
+{ "patterns": ["/users", "/api/products"], "methods": ["GET", "POST"] }
 ```
 
 ### `msw_update_handlers`
@@ -155,7 +212,31 @@ Update existing handlers by replacing handlers that match specified URL patterns
   "handlers": [
     "http.get('/users', () => HttpResponse.json([{id:1,name:'Updated User'}]))",
     "http.get('/api/v1/products', () => HttpResponse.json([{id:1,name:'New Product'}]))"
-  ]
+  ],
+  "methods": ["GET"] // Optional: only update GET handlers
+}
+```
+
+**Parameters:**
+
+- `patterns` (required): Array of URL patterns to match handlers to update
+- `handlers` (required): Array of new handler code strings to replace matched handlers
+- `methods` (optional): Array of HTTP methods to filter by (e.g., `["GET", "POST"]`). If omitted, updates all methods matching the pattern.
+
+**Examples:**
+
+```json
+// Update all handlers for /users (any method)
+{
+  "patterns": ["/users"],
+  "handlers": ["http.get('/users', () => HttpResponse.json([]))"]
+}
+
+// Update only GET handler for /users, keep POST unchanged
+{
+  "patterns": ["/users"],
+  "handlers": ["http.get('/users', () => HttpResponse.json([]))"],
+  "methods": ["GET"]
 }
 ```
 
@@ -310,7 +391,9 @@ try {
   console.log('[MSW] No custom handlers found');
 }
 
-export const handlers = [...baseHandlers, ...customHandlers];
+// Custom handlers first - they take precedence over base handlers
+// MSW evaluates handlers in order, first match wins
+export const handlers = [...customHandlers, ...baseHandlers];
 ```
 
 **`mocks/browser.js`** - MSW worker setup:

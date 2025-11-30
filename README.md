@@ -132,11 +132,11 @@ Check current MSW status and active handlers.
 
 ### `msw_update_handlers`
 
-Update existing handlers by URL pattern.
+Update existing handlers by URL pattern and optional HTTP methods (e.g., `methods: ['GET', 'POST']`).
 
 ### `msw_remove_handlers`
 
-Remove handlers by URL pattern.
+Remove handlers by URL pattern and optional HTTP methods (e.g., `methods: ['GET']` to remove only GET handlers).
 
 ### `msw_reset_handlers`
 
