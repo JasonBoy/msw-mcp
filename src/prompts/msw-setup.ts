@@ -142,10 +142,14 @@ const baseHandlers = [
 // Import custom handlers (local only, gitignored)
 let customHandlers = []
 try {
-  const customModule = await import('./custom-handlers/index.js')
+  const customModule = await import(
+    /* @vite-ignore */ \`./custom-handlers/\${'index'}.js\`
+  )
   customHandlers = customModule.handlers || []
 } catch (error) {
-  console.warn('[MSW] Error loading custom handlers:', error)
+  // This is expected if custom-handlers/index.js doesn't exist yet
+  // To add local-only handlers: cp mocks/custom-handlers/index.example.js mocks/custom-handlers/index.js
+  console.warn('[MSW] No custom handlers found (copy index.example.js to index.js to add custom handlers)')
 }
 
 // Custom handlers first - they take precedence over base handlers
@@ -165,10 +169,16 @@ const baseHandlers: RequestHandler[] = [
 // Import custom handlers (local only, gitignored)
 let customHandlers: RequestHandler[] = []
 try {
-  const customModule = await import('./custom-handlers/index.js')
+  const customModule = await import(
+    /* @vite-ignore */ \`./custom-handlers/\${'index'}.js\`
+  )
   customHandlers = customModule.handlers || []
 } catch (error) {
-  if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+  // This is expected if custom-handlers/index.js doesn't exist yet
+  // To add local-only handlers: cp mocks/custom-handlers/index.example.ts mocks/custom-handlers/index.ts
+  if ((error as any).code === 'ERR_MODULE_NOT_FOUND') {
+    console.warn('[MSW] No custom handlers found (copy index.example.ts to index.ts to add custom handlers)')
+  } else {
     console.warn('[MSW] Error loading custom handlers:', error)
   }
 }
