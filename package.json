@@ -71,5 +71,13 @@
     "testing"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JasonBoy/msw-mcp.git"
+  },
+  "homepage": "https://github.com/JasonBoy/msw-mcp",
+  "bugs": {
+    "url": "https://github.com/JasonBoy/msw-mcp/issues"
+  }
 }
