@@ -235,19 +235,6 @@ import { initMocking } from 'msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks() {
-  if (process.env.NODE_ENV !== 'development') {
-    return
-  }
-
-  const isMSWEnabled =
-    process.env.ENABLE_MSW_MOCK === '1' ||
-    process.env.ENABLE_MSW_MOCK === 'true'
-
-  if (!isMSWEnabled) {
-    console.log('[MSW] Mocking disabled via ENABLE_MSW_MOCK')
-    return
-  }
-
   const isWSEnabled =
     process.env.ENABLE_MSW_WS_MOCK === '1' ||
     process.env.ENABLE_MSW_WS_MOCK === 'true'
@@ -276,23 +263,10 @@ export async function initMocks() {
 
 **For TypeScript Projects (mocks/index.ts):**
 \`\`\`typescript
-import { initMocking, type InitMockingOptions } from 'msw-mcp/client'
+import { initMocking } from 'msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks(): Promise<void> {
-  if (process.env.NODE_ENV !== 'development') {
-    return
-  }
-
-  const isMSWEnabled =
-    process.env.ENABLE_MSW_MOCK === '1' ||
-    process.env.ENABLE_MSW_MOCK === 'true'
-
-  if (!isMSWEnabled) {
-    console.log('[MSW] Mocking disabled via ENABLE_MSW_MOCK')
-    return
-  }
-
   const isWSEnabled =
     process.env.ENABLE_MSW_WS_MOCK === '1' ||
     process.env.ENABLE_MSW_WS_MOCK === 'true'
@@ -489,18 +463,44 @@ Auto-detect entry file based on framework:
 - Vue: \`src/main.js\`
 - Svelte: \`src/main.js\`
 
-Update the entry file:
-\`\`\`javascript
-import { initMocks } from '../mocks'
+Update the entry file with dev mode check OUTSIDE the initMocks call:
 
+**For Vite Projects (using import.meta.env):**
+\`\`\`javascript
 async function startApp() {
-  await initMocks()
+  // Only import and initialize MSW in development when explicitly enabled
+  if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MSW_MOCK === 'true') {
+    const { initMocks } = await import('../mocks')
+    await initMocks()
+  }
 
   // ... rest of app initialization
 }
 
 startApp()
 \`\`\`
+
+**For Rspack/Webpack Projects (using process.env):**
+\`\`\`javascript
+async function startApp() {
+  // Only import and initialize MSW in development when explicitly enabled
+  if (process.env.NODE_ENV === 'development' &&
+      (process.env.ENABLE_MSW_MOCK === '1' || process.env.ENABLE_MSW_MOCK === 'true')) {
+    const { initMocks } = await import('../mocks')
+    await initMocks()
+  }
+
+  // ... rest of app initialization
+}
+
+startApp()
+\`\`\`
+
+**Benefits of this approach:**
+- In production builds, the entire mocks module is tree-shaken (never imported)
+- No unnecessary function call overhead in production
+- Dynamic import ensures mocks code is not bundled in production
+- The check happens before any MSW-related code is loaded
 
 ### 7. Provide Setup Complete Message
 Tell user:
@@ -553,7 +553,7 @@ Ask user: "I found existing MSW setup. Would you like me to migrate to use msw-m
 **A. Delete websocket-bridge.js** (if it exists)
 
 **B. Update mocks/index.js or mocks/index.ts**:
-Replace existing enableMocking logic with initMocking:
+Replace existing enableMocking logic with initMocking (without internal dev checks):
 
 **For JavaScript:**
 \`\`\`javascript
@@ -561,19 +561,6 @@ import { initMocking } from 'msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks() {
-  if (process.env.NODE_ENV !== 'development') {
-    return
-  }
-
-  const isMSWEnabled =
-    process.env.ENABLE_MSW_MOCK === '1' ||
-    process.env.ENABLE_MSW_MOCK === 'true'
-
-  if (!isMSWEnabled) {
-    console.log('[MSW] Mocking disabled')
-    return
-  }
-
   const isWSEnabled =
     process.env.ENABLE_MSW_WS_MOCK === '1' ||
     process.env.ENABLE_MSW_WS_MOCK === 'true'
@@ -601,19 +588,6 @@ import { initMocking } from 'msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks(): Promise<void> {
-  if (process.env.NODE_ENV !== 'development') {
-    return
-  }
-
-  const isMSWEnabled =
-    process.env.ENABLE_MSW_MOCK === '1' ||
-    process.env.ENABLE_MSW_MOCK === 'true'
-
-  if (!isMSWEnabled) {
-    console.log('[MSW] Mocking disabled')
-    return
-  }
-
   const isWSEnabled =
     process.env.ENABLE_MSW_WS_MOCK === '1' ||
     process.env.ENABLE_MSW_WS_MOCK === 'true'
@@ -633,6 +607,34 @@ export async function initMocks(): Promise<void> {
     }
   })
 }
+\`\`\`
+
+**C. Update App Entry Point**:
+Move the dev mode check to the entry point with dynamic import:
+
+**For Vite Projects:**
+\`\`\`javascript
+async function startApp() {
+  if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MSW_MOCK === 'true') {
+    const { initMocks } = await import('../mocks')
+    await initMocks()
+  }
+  // ... rest of app initialization
+}
+startApp()
+\`\`\`
+
+**For Rspack/Webpack Projects:**
+\`\`\`javascript
+async function startApp() {
+  if (process.env.NODE_ENV === 'development' &&
+      (process.env.ENABLE_MSW_MOCK === '1' || process.env.ENABLE_MSW_MOCK === 'true')) {
+    const { initMocks } = await import('../mocks')
+    await initMocks()
+  }
+  // ... rest of app initialization
+}
+startApp()
 \`\`\`
 
 **IMPORTANT**: Detect publicPath from bundler config and replace \`<DETECTED_PUBLIC_PATH>/mockServiceWorker.js\`:
