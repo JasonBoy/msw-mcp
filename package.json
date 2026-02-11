@@ -1,6 +1,6 @@
 {
   "name": "msw-mcp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "MCP server for Mock Service Worker AI interaction",
   "type": "module",
   "bin": {
@@ -71,5 +71,13 @@
     "testing"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JasonBoy/msw-mcp.git"
+  },
+  "homepage": "https://github.com/JasonBoy/msw-mcp",
+  "bugs": {
+    "url": "https://github.com/JasonBoy/msw-mcp/issues"
+  }
 }
