@@ -1,83 +1,25 @@
 {
-  "name": "msw-mcp",
-  "version": "1.2.1",
-  "description": "MCP server for Mock Service Worker AI interaction",
-  "type": "module",
-  "bin": {
-    "msw-mcp": "./build/index.js"
-  },
-  "main": "build/index.js",
-  "exports": {
-    ".": {
-      "types": "./build/index.d.ts",
-      "default": "./build/index.js"
-    },
-    "./client": {
-      "types": "./build/client/index.d.ts",
-      "default": "./build/client/index.js"
-    }
-  },
-  "files": [
-    "build/",
-    "README.md",
-    "LICENSE"
-  ],
+  "name": "msw-mcp-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
   "scripts": {
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "tsc -p tsconfig.json",
-    "build:client": "tsc -p tsconfig.client.json",
-    "watch": "tsc --watch",
-    "watch:client": "tsc -p tsconfig.client.json --watch",
-    "dev": "npm run build && node build/index.js",
-    "start": "node build/index.js",
-    "prepublishOnly": "npm run build",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "format": "turbo run format",
+    "lint": "turbo run lint",
     "prepare": "husky"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "~1.22.0",
-    "uuid": "^13.0.0",
-    "ws": "^8.18.3",
-    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/uuid": "^10.0.0",
-    "@types/ws": "^8.18.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.3",
     "prettier": "^3.6.2",
+    "turbo": "2.9.7",
     "typescript": "^5.0.0"
   },
   "lint-staged": {
     "*.{js,ts,json,md}": [
       "prettier --write"
     ]
-  },
-  "peerDependencies": {
-    "msw": "^2.11.0"
-  },
-  "peerDependenciesMeta": {
-    "msw": {
-      "optional": true
-    }
-  },
-  "keywords": [
-    "mcp",
-    "mock-service-worker",
-    "msw",
-    "ai",
-    "testing"
-  ],
-  "author": "",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/JasonBoy/msw-mcp.git"
-  },
-  "homepage": "https://github.com/JasonBoy/msw-mcp",
-  "bugs": {
-    "url": "https://github.com/JasonBoy/msw-mcp/issues"
   }
 }

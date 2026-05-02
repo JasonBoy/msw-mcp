@@ -18,7 +18,6 @@ async function ensureMSWGlobals(): Promise<void> {
   }
 
   try {
-    // @ts-expect-error msw is provided by the host app at runtime
     const mswExports = (await import('msw')) as Record<string, unknown>;
 
     // Preserve any existing values while ensuring the required exports are present.
