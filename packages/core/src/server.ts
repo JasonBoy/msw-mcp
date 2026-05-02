@@ -2,6 +2,7 @@ import http from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 import { ConnectionManager } from './connection-manager.js';
 import type { WSMessage, WSResponse } from './protocol.js';
+import { SessionManager } from './session-manager.js';
 
 export interface PersistenceConfig {
   persistHandlers: boolean;
@@ -16,6 +17,8 @@ export class WSServer {
   private singleClient: boolean;
   private persistenceConfig: PersistenceConfig;
   private isTakingOver: boolean = false;
+  private sessionName: string;
+  private sessionManager: SessionManager;
 
   constructor(
     port: number = 8080,
@@ -24,10 +27,13 @@ export class WSServer {
       persistHandlers: false,
       persistLimit: null,
     },
+    sessionName: string = SessionManager.getDefaultSessionName(),
   ) {
     this.port = port;
     this.singleClient = singleClient;
     this.persistenceConfig = persistenceConfig;
+    this.sessionName = sessionName;
+    this.sessionManager = new SessionManager();
     this.connectionManager = new ConnectionManager(
       singleClient,
       persistenceConfig,
@@ -35,6 +41,11 @@ export class WSServer {
 
     // Try to start server initially
     this.tryStartServer();
+
+    // Graceful shutdown
+    process.on('SIGINT', () => this.close());
+    process.on('SIGTERM', () => this.close());
+    process.on('exit', () => this.close());
   }
 
   private tryStartServer(): boolean {
@@ -73,10 +84,7 @@ export class WSServer {
 
         if (error.code === 'EADDRINUSE') {
           console.error(
-            `⚠️  Port ${this.port} is already in use by another MCP instance. Running in proxy mode.`,
-          );
-          console.error(
-            `ℹ️  Tool calls will be forwarded to the primary MCP server on port ${this.port}.`,
+            `⚠️  Port ${this.port} is already in use by another instance for session "${this.sessionName}". Running in proxy mode.`,
           );
           // Clean up
           this.httpServer = null;
@@ -97,9 +105,24 @@ export class WSServer {
         const persistMsg = this.persistenceConfig.persistHandlers
           ? `persistence enabled (limit: ${this.persistenceConfig.persistLimit || 'unlimited'})`
           : 'persistence disabled';
+
+        const addr = this.httpServer!.address();
+        const actualPort =
+          typeof addr === 'string' ? this.port : addr?.port || this.port;
+        this.port = actualPort;
+
         console.error(
-          `✅ Server started successfully on port ${this.port} (HTTP + WebSocket, ${mode}, ${persistMsg})`,
+          `✅ Server started successfully for session "${this.sessionName}" on port ${this.port} (HTTP + WebSocket, ${mode}, ${persistMsg})`,
         );
+
+        // Register session
+        this.sessionManager.registerSession({
+          name: this.sessionName,
+          port: this.port,
+          pid: process.pid,
+          cwd: process.cwd(),
+          startTime: Date.now(),
+        });
       });
 
       // Listen on single port for both HTTP and WS
@@ -109,10 +132,7 @@ export class WSServer {
     } catch (error: any) {
       if (error.code === 'EADDRINUSE') {
         console.error(
-          `⚠️  Port ${this.port} is already in use by another MCP instance. Running in proxy mode.`,
-        );
-        console.error(
-          `ℹ️  Tool calls will be forwarded to the primary MCP server on port ${this.port}.`,
+          `⚠️  Port ${this.port} is already in use. Running in proxy mode.`,
         );
         return false;
       }
@@ -124,24 +144,30 @@ export class WSServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
   ): void {
-    // Handle POST /api/tools/* for proxy requests from secondary MCPs
-    if (req.method === 'POST' && req.url?.startsWith('/api/tools/')) {
-      console.error(
-        `🔀 Received proxied tool call from secondary MCP: ${req.url}`,
-      );
+    // Handle POST /api/tools/* for proxy requests from secondary MCPs or CLI
+    if (
+      req.method === 'POST' &&
+      (req.url?.startsWith('/api/tools/') || req.url === '/api/status')
+    ) {
       let body = '';
       req.on('data', (chunk) => (body += chunk));
       req.on('end', async () => {
         try {
+          if (req.url === '/api/status') {
+            const status = this.connectionManager.getStatus();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(status));
+            return;
+          }
+
           const message: WSMessage = JSON.parse(body);
-          console.error(`  ↳ Tool: ${message.type}`);
+          console.error(`🔀 Received tool call: ${message.type}`);
           const response = await this.connectionManager.sendMessage(message);
-          console.error(`  ✅ Proxied tool call completed successfully`);
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(response));
         } catch (error: any) {
-          console.error(`  ❌ Proxied tool call failed:`, error.message);
+          console.error(`  ❌ Tool call failed:`, error.message);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: error.message }));
         }
@@ -176,17 +202,21 @@ export class WSServer {
     this.isTakingOver = false;
   }
 
-  private async proxyToMCP(message: WSMessage): Promise<WSResponse> {
-    console.error(`🔀 Proxying tool call to primary MCP: ${message.type}`);
+  private async proxyToPrimary(message: WSMessage): Promise<WSResponse> {
+    console.error(`🔀 Proxying tool call to primary instance: ${message.type}`);
+
+    // Find the port from the session manager
+    const session = this.sessionManager.getSession(this.sessionName);
+    const targetPort = session ? session.port : this.port;
+
     const response = await fetch(
-      `http://localhost:${this.port}/api/tools/proxy`,
+      `http://localhost:${targetPort}/api/tools/${message.type.toLowerCase()}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(message),
       },
     );
-    console.error(`  ✅ Primary MCP responded with status ${response.status}`);
 
     if (!response.ok) {
       const error: any = new Error(
@@ -198,7 +228,7 @@ export class WSServer {
       throw error;
     }
 
-    return await response.json();
+    return (await response.json()) as WSResponse;
   }
 
   async sendMessage(message: WSMessage): Promise<WSResponse> {
@@ -207,19 +237,19 @@ export class WSServer {
       return await this.connectionManager.sendMessage(message);
     }
 
-    // Otherwise, proxy to primary MCP
-    console.error(`ℹ️  Running in proxy mode, forwarding to primary MCP...`);
+    // Otherwise, proxy to primary
     try {
-      return await this.proxyToMCP(message);
+      return await this.proxyToPrimary(message);
     } catch (error: any) {
-      console.error(`❌ Proxy failed:`, error.message);
       // If proxy failed with connection error, attempt takeover
       if (
         error.code === 'ECONNREFUSED' ||
         error.code === 'ECONNRESET' ||
         error.cause?.code === 'ECONNREFUSED'
       ) {
-        console.error('⚠️  Primary MCP not responding. Attempting takeover...');
+        console.error(
+          '⚠️  Primary instance not responding. Attempting takeover...',
+        );
 
         await this.attemptTakeover();
 
@@ -227,7 +257,6 @@ export class WSServer {
         return await this.connectionManager.sendMessage(message);
       }
 
-      // Other errors, re-throw
       throw error;
     }
   }
@@ -243,9 +272,12 @@ export class WSServer {
   close(): void {
     if (this.wss) {
       this.wss.close();
+      this.wss = null;
     }
     if (this.httpServer) {
       this.httpServer.close();
+      this.httpServer = null;
     }
+    this.sessionManager.removeSession(this.sessionName);
   }
 }

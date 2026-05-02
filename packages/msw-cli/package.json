@@ -1,0 +1,31 @@
+{
+  "name": "msw-cli",
+  "version": "1.0.0",
+  "description": "Command-line interface for MSW MCP",
+  "type": "module",
+  "bin": {
+    "msw-cli": "./build/index.js"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build/"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "@msw-mcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "msw",
+    "mcp",
+    "cli"
+  ],
+  "license": "MIT"
+}

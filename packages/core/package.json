@@ -1,0 +1,28 @@
+{
+  "name": "@msw-mcp/core",
+  "version": "1.0.0",
+  "description": "Core WebSocket server logic for MSW MCP bridge",
+  "type": "module",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build/"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1"
+  },
+  "keywords": [
+    "msw",
+    "mcp",
+    "websocket"
+  ],
+  "license": "MIT"
+}

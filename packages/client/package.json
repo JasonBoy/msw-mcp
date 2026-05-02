@@ -1,0 +1,24 @@
+{
+  "name": "@msw-mcp/client",
+  "version": "1.0.0",
+  "description": "Browser client for MSW MCP bridge",
+  "type": "module",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build/"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "msw",
+    "mcp",
+    "client"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "msw": "^2.14.2",
+    "typescript": "^5.0.0"
+  }
+}

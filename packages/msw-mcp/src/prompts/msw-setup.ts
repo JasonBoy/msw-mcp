@@ -90,7 +90,7 @@ Check if project uses TypeScript:
 
 **Check if dependencies are installed:**
 - Read package.json and check if \`msw\` exists in dependencies or devDependencies
-- Read package.json and check if \`msw-mcp\` exists in dependencies or devDependencies
+- Read package.json and check if \`@msw-mcp/client\` exists in dependencies or devDependencies
 
 **If either is missing, ask user permission to install:**
 - Use AskUserQuestion tool to ask: "MSW setup requires installing dependencies. May I install them for you?"
@@ -99,11 +99,11 @@ Check if project uses TypeScript:
 **If user approves automatic installation:**
 - Run npm install commands using Bash tool:
   - If msw missing: \`npm install -D msw@^2.11.0\`
-  - If msw-mcp missing: \`npm install -D msw-mcp\`
+  - If @msw-mcp/client missing: \`npm install -D @msw-mcp/client\`
 - Wait for installation to complete before proceeding
 
 **If user chooses manual installation:**
-- Tell user: "Please run: \`npm install -D msw@^2.11.0 msw-mcp\`"
+- Tell user: "Please run: \`npm install -D msw@^2.11.0 @msw-mcp/client\`"
 - Stop and wait for user to install dependencies
 
 ### 2. Initialize MSW Service Worker
@@ -231,7 +231,7 @@ export {}
 
 **For JavaScript Projects (mocks/index.js):**
 \`\`\`javascript
-import { initMocking } from 'msw-mcp/client'
+import { initMocking } from '@msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks() {
@@ -263,7 +263,7 @@ export async function initMocks() {
 
 **For TypeScript Projects (mocks/index.ts):**
 \`\`\`typescript
-import { initMocking } from 'msw-mcp/client'
+import { initMocking } from '@msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks(): Promise<void> {
@@ -526,26 +526,26 @@ Next steps:
 ## MIGRATION MODE (Existing mocks/ directory found)
 
 ### 1. Confirm Migration
-Ask user: "I found existing MSW setup. Would you like me to migrate to use msw-mcp/client? This will:"
+Ask user: "I found existing MSW setup. Would you like me to migrate to use @msw-mcp/client? This will:"
 - Keep your existing handlers.js and custom-handlers/ unchanged
-- Update imports to use msw-mcp/client
+- Update imports to use @msw-mcp/client
 - Delete websocket-bridge.js (replaced by import)
 
 ### 2. Check and Install Dependencies
 
-**Check if msw-mcp is installed:**
-- Read package.json and check if \`msw-mcp\` exists in dependencies or devDependencies
+**Check if @msw-mcp/client is installed:**
+- Read package.json and check if \`@msw-mcp/client\` exists in dependencies or devDependencies
 
-**If msw-mcp is missing, ask user permission:**
-- Use AskUserQuestion tool: "Migration requires msw-mcp package. May I install it for you?"
+**If @msw-mcp/client is missing, ask user permission:**
+- Use AskUserQuestion tool: "Migration requires @msw-mcp/client package. May I install it for you?"
   - Options: "Yes, install automatically" / "No, I'll install manually"
 
 **If user approves:**
-- Run using Bash tool: \`npm install -D msw-mcp\`
+- Run using Bash tool: \`npm install -D @msw-mcp/client\`
 - Wait for installation to complete
 
 **If user declines:**
-- Tell user: "Please run: \`npm install -D msw-mcp\`"
+- Tell user: "Please run: \`npm install -D @msw-mcp/client\`"
 - Stop and wait for user to install
 
 ### 3. Migration Steps (if user confirms)
@@ -557,7 +557,7 @@ Replace existing enableMocking logic with initMocking (without internal dev chec
 
 **For JavaScript:**
 \`\`\`javascript
-import { initMocking } from 'msw-mcp/client'
+import { initMocking } from '@msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks() {
@@ -584,7 +584,7 @@ export async function initMocks() {
 
 **For TypeScript:**
 \`\`\`typescript
-import { initMocking } from 'msw-mcp/client'
+import { initMocking } from '@msw-mcp/client'
 import { worker } from './browser'
 
 export async function initMocks(): Promise<void> {

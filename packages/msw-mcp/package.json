@@ -11,10 +11,6 @@
     ".": {
       "types": "./build/index.d.ts",
       "default": "./build/index.js"
-    },
-    "./client": {
-      "types": "./build/client/index.d.ts",
-      "default": "./build/client/index.js"
     }
   },
   "files": [
@@ -23,11 +19,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm run build:server && pnpm run build:client",
-    "build:server": "tsc -p tsconfig.json",
-    "build:client": "tsc -p tsconfig.client.json",
+    "build": "tsc",
     "watch": "tsc --watch",
-    "watch:client": "tsc -p tsconfig.client.json --watch",
     "dev": "pnpm run build && node build/index.js",
     "start": "node build/index.js",
     "prepublishOnly": "pnpm run build",
@@ -35,13 +28,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "~1.22.0",
-    "uuid": "^13.0.0",
-    "ws": "^8.18.3",
+    "@msw-mcp/core": "workspace:*",
+    "@msw-mcp/client": "workspace:*",
     "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "@types/uuid": "^10.0.0",
-    "@types/ws": "^8.18.1"
   },
   "peerDependencies": {
     "msw": "^2.11.0"
@@ -59,13 +48,5 @@
     "testing"
   ],
   "author": "",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/JasonBoy/msw-mcp.git"
-  },
-  "homepage": "https://github.com/JasonBoy/msw-mcp",
-  "bugs": {
-    "url": "https://github.com/JasonBoy/msw-mcp/issues"
-  }
+  "license": "MIT"
 }

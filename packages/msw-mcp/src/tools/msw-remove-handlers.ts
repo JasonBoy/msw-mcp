@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { WSServer } from '../websocket/server.js';
+import type { WSServer } from '@msw-mcp/core';
 
 export function createMSWRemoveHandlersTool(wsServer: WSServer) {
   return {

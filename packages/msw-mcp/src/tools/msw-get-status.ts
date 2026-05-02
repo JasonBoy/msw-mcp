@@ -1,4 +1,4 @@
-import type { WSServer } from '../websocket/server.js';
+import type { WSServer } from '@msw-mcp/core';
 
 export function createMSWGetStatusTool(wsServer: WSServer) {
   return {

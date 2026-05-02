@@ -1,11 +1,7 @@
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { WSMessage, WSResponse, MSWStatus } from './protocol.js';
-
-export interface PersistenceConfig {
-  persistHandlers: boolean;
-  persistLimit: number | null;
-}
+import { type PersistenceConfig } from './server.js';
 
 export class ConnectionManager {
   private clients = new Set<WebSocket>();

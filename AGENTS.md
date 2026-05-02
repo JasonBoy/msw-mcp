@@ -5,7 +5,7 @@ This project is a monorepo managed by **pnpm** and **Turborepo**. It is designed
 ## Tooling
 
 - **Package Manager:** [pnpm](https://pnpm.io/) (Workspaces)
-- **Build System:** [Turborepo](https://turbo.build/)
+- **Build System:** [Turborepo](https://turborepo.dev/docs)
 - **Linting & Formatting:** Prettier, lint-staged, Husky
 - **Language:** TypeScript
 
@@ -22,3 +22,11 @@ This project is a monorepo managed by **pnpm** and **Turborepo**. It is designed
 - `pnpm run build`: Build all packages using Turbo.
 - `pnpm run format`: Format the entire codebase.
 - `pnpm turbo run <task>`: Run specific Turbo tasks.
+
+## Development Guidelines
+
+- **Workspaces:** Always perform actions from the root using `pnpm` and `turbo`.
+- **Dependencies:** Add shared devDependencies to the root `package.json`. Package-specific dependencies go into the package's `package.json`.
+- **Code Style:** Follow the Prettier configuration. Use `pnpm run format` before committing.
+- **Builds:** Use `pnpm run build` to ensure all packages compile correctly.
+- **TypeScript:** The project uses TypeScript. Ensure types are correct and avoid `any` or `@ts-ignore` unless absolutely necessary.

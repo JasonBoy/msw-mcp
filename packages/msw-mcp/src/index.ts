@@ -2,7 +2,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { WSServer } from './websocket/server.js';
+import { WSServer } from '@msw-mcp/core';
 import { createMSWAddHandlersTool } from './tools/msw-add-handlers.js';
 import { createMSWResetHandlersTool } from './tools/msw-reset-handlers.js';
 import { createMSWRemoveHandlersTool } from './tools/msw-remove-handlers.js';
