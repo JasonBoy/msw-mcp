@@ -102,29 +102,67 @@ async function executeCommand(type: string, payload: any) {
 
 program
   .command('add <handlers...>')
-  .description('Add MSW handlers')
+  .description(
+    'Add new MSW handlers. Handlers must be valid JS code strings returning a valid Response using HttpResponse.',
+  )
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ msw-cli add "http.get('/api/user', () => HttpResponse.json({ id: 1 }))"
+  $ msw-cli add "http.post('/api/login', () => HttpResponse.text('OK'))"
+`,
+  )
   .action((handlers) => {
     executeCommand('addHandlers', { handlers });
   });
 
 program
   .command('update <patterns...>')
-  .description('Update MSW handlers')
-  .requiredOption('-h, --handlers <handlers...>', 'New handlers code')
+  .description(
+    'Update existing MSW handlers that match specified URL patterns.',
+  )
+  .requiredOption('-h, --handlers <handlers...>', 'New handlers code strings')
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ msw-cli update "/api/user" -h "http.get('/api/user', () => HttpResponse.json({ id: 2 }))"
+  $ msw-cli update "*/api/*" -h "http.get('/api/test', () => HttpResponse.json({ ok: true }))"
+`,
+  )
   .action((patterns, options) => {
     executeCommand('updateHandlers', { patterns, handlers: options.handlers });
   });
 
 program
   .command('remove <patterns...>')
-  .description('Remove MSW handlers')
+  .description('Remove MSW handlers matching specified URL patterns.')
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ msw-cli remove "/api/user"
+  $ msw-cli remove "*/api/*" "https://example.com/*"
+`,
+  )
   .action((patterns) => {
     executeCommand('removeHandlers', { patterns });
   });
 
 program
   .command('reset [handlers...]')
-  .description('Reset MSW handlers')
+  .description(
+    'Reset MSW handlers. If no handlers are provided, removes all runtime handlers and keeps only initial ones.',
+  )
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ msw-cli reset
+  $ msw-cli reset "http.get('/api/user', () => HttpResponse.json({ id: 1 }))"
+`,
+  )
   .action((handlers) => {
     executeCommand('resetHandlers', {
       handlers: handlers.length > 0 ? handlers : undefined,
