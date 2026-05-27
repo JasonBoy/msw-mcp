@@ -1,7 +1,7 @@
 {
   "name": "msw-cli",
-  "version": "1.0.0",
-  "description": "Command-line interface for MSW MCP",
+  "version": "1.0.6",
+  "description": "A CLI for AI agents to dynamically update Mock Service Worker (MSW) handlers.",
   "type": "module",
   "bin": {
     "msw-cli": "./build/index.js"
@@ -15,7 +15,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "commander": "^11.1.0",
+    "commander": "^14.0.0",
     "@msw-mcp/core": "workspace:*"
   },
   "devDependencies": {
@@ -24,7 +24,6 @@
   },
   "keywords": [
     "msw",
-    "mcp",
     "cli"
   ],
   "license": "MIT"

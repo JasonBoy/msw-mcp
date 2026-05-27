@@ -14,7 +14,7 @@ export class SessionManager {
   private sessionsDir: string;
 
   constructor() {
-    this.sessionsDir = path.join(os.homedir(), '.msw-mcp', 'sessions');
+    this.sessionsDir = path.join(os.homedir(), '.msw-cli', 'sessions');
     if (!fs.existsSync(this.sessionsDir)) {
       fs.mkdirSync(this.sessionsDir, { recursive: true });
     }
@@ -50,12 +50,12 @@ export class SessionManager {
       try {
         process.kill(data.pid, 0);
         return data;
-      } catch (e) {
+      } catch {
         // Process is dead, remove session file
         this.removeSession(name);
         return null;
       }
-    } catch (e) {
+    } catch {
       this.removeSession(name);
       return null;
     }

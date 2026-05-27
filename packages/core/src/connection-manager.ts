@@ -106,12 +106,34 @@ export class ConnectionManager {
     });
   }
 
-  getStatus(): MSWStatus {
-    return {
-      connected: this.clients.size > 0,
-      workerStatus: 'unknown',
-      activeHandlers: [],
-    };
+  async getStatus(): Promise<MSWStatus> {
+    const connected = this.clients.size > 0;
+    if (!connected) {
+      return {
+        connected: false,
+        workerStatus: 'unknown',
+        activeHandlers: [],
+      };
+    }
+
+    try {
+      const response = await this.sendMessage({
+        id: '',
+        type: 'GET_STATUS',
+      });
+
+      return {
+        connected: true,
+        workerStatus: response.workerStatus ?? 'unknown',
+        activeHandlers: response.activeHandlers ?? [],
+      };
+    } catch {
+      return {
+        connected: true,
+        workerStatus: 'unknown',
+        activeHandlers: [],
+      };
+    }
   }
 
   hasConnectedClients(): boolean {

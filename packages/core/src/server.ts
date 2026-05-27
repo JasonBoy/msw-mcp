@@ -9,16 +9,20 @@ export interface PersistenceConfig {
   persistLimit: number | null;
 }
 
+const MAX_PORT_ATTEMPTS = 20;
+
 export class WSServer {
   private httpServer: http.Server | null = null;
   private wss: WebSocketServer | null = null;
   private connectionManager: ConnectionManager;
   private port: number;
+  private readonly initialPort: number;
   private singleClient: boolean;
   private persistenceConfig: PersistenceConfig;
   private isTakingOver: boolean = false;
   private sessionName: string;
   private sessionManager: SessionManager;
+  private strictPort: boolean;
 
   constructor(
     port: number = 8080,
@@ -28,8 +32,11 @@ export class WSServer {
       persistLimit: null,
     },
     sessionName: string = SessionManager.getDefaultSessionName(),
+    strictPort: boolean = false,
   ) {
     this.port = port;
+    this.initialPort = port;
+    this.strictPort = strictPort;
     this.singleClient = singleClient;
     this.persistenceConfig = persistenceConfig;
     this.sessionName = sessionName;
@@ -46,6 +53,43 @@ export class WSServer {
     process.on('SIGINT', () => this.close());
     process.on('SIGTERM', () => this.close());
     process.on('exit', () => this.close());
+  }
+
+  private cleanupPendingServer(): void {
+    if (this.wss) {
+      this.wss.close();
+      this.wss = null;
+    }
+    if (this.httpServer) {
+      this.httpServer.close();
+      this.httpServer = null;
+    }
+  }
+
+  private handlePortInUse(): boolean {
+    if (this.strictPort) {
+      console.error(
+        `❌ Port ${this.port} is already in use. Choose a different port or stop the process using it.`,
+      );
+      process.exit(1);
+    }
+    return this.tryNextPort();
+  }
+
+  private tryNextPort(): boolean {
+    const portsTried = this.port - this.initialPort + 1;
+    if (portsTried >= MAX_PORT_ATTEMPTS) {
+      console.error(
+        `❌ Could not find an available port after ${MAX_PORT_ATTEMPTS} attempts (starting from ${this.initialPort}).`,
+      );
+      return false;
+    }
+
+    console.error(
+      `⚠️  Port ${this.port} is already in use, trying port ${this.port + 1}...`,
+    );
+    this.port++;
+    return this.tryStartServer();
   }
 
   private tryStartServer(): boolean {
@@ -83,14 +127,11 @@ export class WSServer {
         errorHandled = true;
 
         if (error.code === 'EADDRINUSE') {
-          console.error(
-            `⚠️  Port ${this.port} is already in use by another instance for session "${this.sessionName}". Running in proxy mode.`,
-          );
-          // Clean up
-          this.httpServer = null;
-          this.wss = null;
+          this.cleanupPendingServer();
+          this.handlePortInUse();
         } else {
           console.error(`❌ Server error:`, error);
+          this.cleanupPendingServer();
         }
       });
 
@@ -131,10 +172,8 @@ export class WSServer {
       return true;
     } catch (error: any) {
       if (error.code === 'EADDRINUSE') {
-        console.error(
-          `⚠️  Port ${this.port} is already in use. Running in proxy mode.`,
-        );
-        return false;
+        this.cleanupPendingServer();
+        return this.handlePortInUse();
       }
       throw error;
     }
@@ -154,7 +193,7 @@ export class WSServer {
       req.on('end', async () => {
         try {
           if (req.url === '/api/status') {
-            const status = this.connectionManager.getStatus();
+            const status = await this.connectionManager.getStatus();
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(status));
             return;

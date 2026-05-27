@@ -10,6 +10,7 @@ const persistLimit = process.env.MSW_PERSIST_LIMIT
   : null;
 const sessionName =
   process.env.MSW_SESSION_NAME || SessionManager.getDefaultSessionName();
+const strictPort = process.env.MSW_STRICT_PORT === 'true';
 
 console.error(`🚀 Starting MSW Daemon for session: ${sessionName}`);
 
@@ -21,6 +22,7 @@ const server = new WSServer(
     persistLimit,
   },
   sessionName,
+  strictPort,
 );
 
 // Keep the process alive
