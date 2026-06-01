@@ -1,0 +1,125 @@
+---
+title: Quick Start
+description: Add your first live MSW mock in under five minutes using msw-cli.
+---
+
+import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+This guide gets you from zero to a live browser mock in five minutes using **msw-cli**. Make sure you've completed [Installation](/getting-started/installation) first.
+
+---
+
+## With msw-cli
+
+<Steps>
+
+1. **Open a session** (starts the daemon on port 6789):
+
+   ```bash
+   msw-cli open
+   ```
+
+   Output:
+
+   ```
+   [MSW] Daemon started on ws://localhost:6789
+   [MSW] Session: my-project
+   ```
+
+2. **Check the browser connection:**
+
+   ```bash
+   msw-cli status
+   ```
+
+   You should see `connected: true` once your app has loaded in the browser with the MSW bridge active.
+
+3. **Add a mock handler:**
+
+   ```bash
+   msw-cli add "http.get('/api/user', () => HttpResponse.json({ id: 1, name: 'Alice' }))"
+   ```
+
+   The handler activates in your browser **immediately** — no reload needed.
+
+4. **Verify it's working:**
+
+   In DevTools or your app, make a request to `/api/user` — you'll see the mocked response:
+
+   ```json
+   { "id": 1, "name": "Alice" }
+   ```
+
+5. **Update the mock:**
+
+   ```bash
+   msw-cli update "/api/user" -h "http.get('/api/user', () => HttpResponse.json({ id: 2, name: 'Bob' }))"
+   ```
+
+6. **Remove the mock:**
+
+   ```bash
+   msw-cli remove "/api/user"
+   ```
+
+7. **Reset to initial handlers:**
+
+   ```bash
+   msw-cli reset
+   ```
+
+8. **Close the session when done:**
+
+   ```bash
+   msw-cli close
+   ```
+
+</Steps>
+
+---
+
+## With msw-mcp (AI assistant)
+
+If you have `msw-mcp` configured in your MCP client (Cursor, Claude Code, etc.):
+
+<Steps>
+
+1. **Scaffold your project** — run the `/msw-setup` prompt:
+
+   ```
+   /msw-setup
+   ```
+
+   The AI will detect your framework, install dependencies, and create the mocks folder.
+
+2. **Start your dev server** so the browser connects to the MSW WebSocket.
+
+3. **Ask your AI assistant to add a mock:**
+
+   > "Mock the `GET /api/products` endpoint to return an array of 3 products with id, name, and price."
+
+   The AI generates the handler code and calls `msw_add_handlers` — the browser updates instantly.
+
+4. **Test an error scenario:**
+
+   > "Make `POST /api/checkout` return a 503 Service Unavailable error."
+
+5. **Check what's active:**
+
+   > "What MSW handlers are currently active?"
+
+   The AI calls `msw_get_status` and reports back.
+
+</Steps>
+
+<Aside type="tip">
+You can mix CLI and MCP within the same session — they share the same WebSocket daemon. Run `msw-cli open` while your MCP server is active and both reach the same browser tab.
+</Aside>
+
+---
+
+## What's next
+
+- [msw-cli Commands](/msw-cli/commands) — full reference for all CLI commands
+- [Session Management](/msw-cli/sessions) — working with multiple named sessions
+- [MCP Tools](/msw-mcp/tools) — full reference for all MCP tools

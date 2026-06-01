@@ -1,0 +1,84 @@
+---
+title: /msw-setup Prompt
+description: Use the /msw-setup MCP prompt to automatically scaffold MSW and the browser client in any web project.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+The `/msw-setup` prompt is a built-in MCP prompt that instructs your AI assistant to scaffold the complete MSW + browser bridge setup automatically.
+
+---
+
+## Usage
+
+In any MCP client with `msw-mcp` configured, type:
+
+```
+/msw-setup
+```
+
+---
+
+## What it does
+
+<Steps>
+
+1. **Detect your framework** — React, Vue, Svelte, vanilla JS, Next.js, Nuxt, SvelteKit, and more.
+
+2. **Install dependencies:**
+   ```bash
+   npm install -D msw@^2.11.0 msw-mcp
+   npx msw init public/ --save
+   ```
+
+3. **Create the mocks directory:**
+   - `mocks/handlers.js` — base handler definitions
+   - `mocks/browser.js` — MSW worker setup with `window.msw` exposure
+   - `mocks/index.js` — `enableMocking()` with WebSocket bridge
+
+4. **Configure environment variables** — creates or updates `.env.local` with `ENABLE_MSW_MOCK`, `ENABLE_MSW_WS_MOCK`, and `MCP_SERVER_URL`.
+
+5. **Integrate with the app entry point** — adds the `enableMocking()` call before your app starts.
+
+6. **Handle migrations** — if MSW is already set up, migrates to use `msw-mcp/client` while preserving existing base handlers.
+
+7. **Add `.gitignore` entries** for `mocks/custom-handlers/`.
+
+</Steps>
+
+---
+
+## Optional arguments
+
+| Argument | Description |
+|----------|-------------|
+| `framework` | Specify the framework (auto-detected if omitted) |
+| `serviceWorkerPath` | Custom service worker URL (default: `/mockServiceWorker.js`) |
+
+Examples:
+
+> `/msw-setup` — auto-detect everything  
+> `/msw-setup for a Vite + React project`  
+> `/msw-setup with serviceWorkerPath /static/mockServiceWorker.js`
+
+---
+
+## When to use it
+
+- **New project** — creates everything from scratch.
+- **Existing MSW setup** — migrates to the WebSocket bridge while preserving base handlers.
+- **Onboarding a teammate** — reliable, consistent setup in any project.
+
+<Aside type="tip">
+After `/msw-setup` completes, start your dev server, then ask your AI:
+
+> "Add a mock for GET /api/user that returns `{ id: 1, name: 'Alice' }`."
+
+The AI calls `msw_add_handlers` and the browser updates immediately.
+</Aside>
+
+---
+
+## Manual setup alternative
+
+If you prefer not to use the prompt, follow the [Installation](/getting-started/installation) guide for manual step-by-step setup.

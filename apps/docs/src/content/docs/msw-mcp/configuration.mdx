@@ -1,0 +1,152 @@
+---
+title: Configuration
+description: Server flags, environment variables, and browser client options for msw-mcp.
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+## Server flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--mock-ws-port <port>` | `6789` | WebSocket server port |
+| `--single-client` | off | Only send messages to the most recently connected tab |
+| `--persist-handlers` | off | Persist all handlers to browser localStorage |
+| `--persist-handlers=<N>` | — | Persist only the N most recent handlers (FIFO) |
+
+### Usage examples
+
+<Tabs>
+  <TabItem label="Cursor / mcp.json">
+
+```json
+{
+  "mcpServers": {
+    "msw-mcp": {
+      "command": "npx",
+      "args": [
+        "msw-mcp@latest",
+        "--mock-ws-port=6789",
+        "--persist-handlers=10"
+      ]
+    }
+  }
+}
+```
+
+  </TabItem>
+  <TabItem label="Claude Code">
+
+```bash
+claude mcp add msw-mcp npx msw-mcp@latest -- --mock-ws-port=6789 --persist-handlers
+```
+
+  </TabItem>
+  <TabItem label="npx directly">
+
+```bash
+npx msw-mcp@latest --mock-ws-port=3001 --single-client --persist-handlers=10
+```
+
+  </TabItem>
+</Tabs>
+
+---
+
+## `--mock-ws-port`
+
+Sets the WebSocket port the browser bridge connects to. Must match `MCP_SERVER_URL` in your app's `.env.local`.
+
+```bash
+# Server
+npx msw-mcp@latest --mock-ws-port=3001
+
+# App .env.local
+MCP_SERVER_URL=ws://localhost:3001
+```
+
+---
+
+## `--single-client`
+
+By default, `msw-mcp` broadcasts to **all** connected browser tabs. Enable `--single-client` to send updates only to the most recently connected tab.
+
+---
+
+## `--persist-handlers`
+
+When enabled, dynamically added handlers are saved to the browser's `localStorage` under the key `msw_dynamic_handlers` and automatically restored on page refresh.
+
+```bash
+# Persist all handlers
+npx msw-mcp@latest --persist-handlers
+
+# Persist only the 10 most recent handlers (FIFO)
+npx msw-mcp@latest --persist-handlers=10
+```
+
+To manually clear persisted handlers in the browser console:
+
+```javascript
+window.__mswBridge.clearPersistedHandlers();
+```
+
+---
+
+## Browser client options
+
+```typescript
+interface EnableMockingOptions {
+  worker: ServiceWorkerRegistration; // MSW worker instance (required)
+  wsEnabled?: boolean;               // Enable WebSocket bridge (default: true)
+  wsBridgeOptions?: {
+    url?: string;                    // WebSocket URL (default: ws://localhost:6789)
+    reconnectInterval?: number;      // Reconnect delay in ms (default: 5000)
+    maxReconnectAttempts?: number;   // Max reconnect attempts (default: 10)
+    enabled?: boolean;               // Toggle bridge on/off
+  };
+  workerOptions?: {
+    onUnhandledRequest?: 'warn' | 'error' | 'bypass';
+    quiet?: boolean;
+    serviceWorker?: { url: string };
+  };
+}
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_MSW_MOCK` | — | Set to `true` or `1` to enable MSW |
+| `ENABLE_MSW_WS_MOCK` | — | Set to `true` or `1` to enable the WebSocket bridge |
+| `MCP_SERVER_URL` | `ws://localhost:6789` | WebSocket server URL |
+
+Create `.env.local` in your frontend project:
+
+```bash
+ENABLE_MSW_MOCK=true
+ENABLE_MSW_WS_MOCK=true
+MCP_SERVER_URL=ws://localhost:6789
+```
+
+---
+
+## Debugging the browser bridge
+
+```javascript
+// Check bridge state
+window.__mswBridge
+
+// Current WebSocket connection
+window.__mswBridge.ws
+
+// Currently active handlers
+window.__mswBridge.activeHandlers
+
+// Clear persisted handlers
+window.__mswBridge.clearPersistedHandlers()
+```
+
+<Aside type="note">
+`window.__mswBridge` is only available in `NODE_ENV=development`.
+</Aside>

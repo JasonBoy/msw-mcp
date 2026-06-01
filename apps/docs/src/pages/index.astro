@@ -1,0 +1,192 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+
+const cliCode = [
+  '<span class="line-comment"># 1. Start the daemon</span>',
+  '<span class="line-cmd">$ msw-cli open</span>',
+  '',
+  '<span class="line-comment"># 2. Add a mock</span>',
+  '<span class="line-cmd">$ msw-cli add \\</span>',
+  `<span class="line-str">  "http.get('/api/user', () => HttpResponse.json({ id: 1 }))"</span>`,
+  '',
+  '<span class="line-comment"># 3. Check status</span>',
+  '<span class="line-cmd">$ msw-cli status</span>',
+  '',
+  '<span class="line-comment"># 4. Close when done</span>',
+  '<span class="line-cmd">$ msw-cli close</span>',
+].join('\n');
+
+const mcpCode = [
+  '<span class="line-comment">// .cursor/mcp.json</span>',
+  '<span class="line-cmd">{</span>',
+  '<span class="line-cmd">  "mcpServers": {</span>',
+  '<span class="line-cmd">    "msw-mcp": {</span>',
+  '<span class="line-cmd">      "command": "npx",</span>',
+  '<span class="line-cmd">      "args": ["msw-mcp@latest"]</span>',
+  '<span class="line-cmd">    }</span>',
+  '<span class="line-cmd">  }</span>',
+  '<span class="line-cmd">}</span>',
+  '',
+  '<span class="line-comment">// Then ask your AI assistant:</span>',
+  '<span class="line-str">"Mock GET /api/users to return 500"</span>',
+].join('\n');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'MSW Agent Tools — Live API mocking for AI agents and developers',
+    tableOfContents: false,
+  }}
+  hasSidebar={false}
+  headings={[]}
+>
+  <!-- Hero -->
+  <div class="hero-wrapper">
+    <div class="hero-badge">Agent-Native API Mocking</div>
+    <h1 class="hero-title">
+      Control your mocks,<br /><span>live.</span>
+    </h1>
+    <p class="hero-subtitle">
+      <strong>msw-cli</strong> and <strong>msw-mcp</strong> let AI agents and
+      developer tools update Mock Service Worker handlers in the browser in real
+      time — no page reload, no server restart.
+    </p>
+    <div class="hero-actions">
+      <a href="/getting-started/installation" class="btn btn-primary">
+        Get Started →
+      </a>
+      <a
+        href="https://github.com/JasonBoy/msw-mcp"
+        class="btn btn-secondary"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        GitHub ↗
+      </a>
+    </div>
+    <div class="hero-install">
+      <span class="prompt">$</span>
+      <span class="cmd">npm install -g msw-cli</span>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Features -->
+  <div class="section">
+    <div class="section-label">Why MSW Tools</div>
+    <h2 class="section-title">Everything you need for dynamic mocking</h2>
+    <p class="section-desc">
+      Purpose-built for AI-assisted development workflows and agent-driven
+      testing scenarios.
+    </p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Agent-Friendly CLI</h3>
+        <p>
+          Open a session, add handlers — just like Playwright. Any AI agent or
+          script can drive mocks with simple shell commands, no MCP required.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <h3>Zero-Reload Updates</h3>
+        <p>
+          Handlers update live in the browser via WebSocket. Never restart your
+          dev server just to change a mock response.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>Session Management</h3>
+        <p>
+          Isolated named sessions per project directory. List, close, and manage
+          concurrent environments without conflicts.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>MCP Integration</h3>
+        <p>
+          AI assistants in Cursor, Claude Code, and VS Code can call <code
+            >msw_add_handlers</code
+          > directly via the Model Context Protocol.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h3>Framework Agnostic</h3>
+        <p>
+          Works with React, Vue, Svelte, vanilla JS — any framework that
+          supports MSW 2.x service workers.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <h3>Handler Persistence</h3>
+        <p>
+          Optionally persist dynamic handlers across page refreshes via
+          localStorage. FIFO limit keeps storage clean.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Two ways to use it -->
+  <div class="section">
+    <div class="section-label">Two ways to use it</div>
+    <h2 class="section-title">CLI or MCP — your choice</h2>
+    <p class="section-desc">
+      Both share the same WebSocket core. Pick the integration that fits your
+      workflow.
+    </p>
+    <div class="two-ways-grid">
+      <div class="way-card featured">
+        <div class="way-tag cli">Recommended</div>
+        <h3>msw-cli</h3>
+        <p>
+          A Playwright-style CLI for any agent or script. Open a session, then
+          add, update, remove, or reset handlers with plain shell commands.
+        </p>
+        <pre><code set:html={cliCode} /></pre>
+        <a href="/msw-cli/overview" class="way-cta">msw-cli docs →</a>
+      </div>
+
+      <div class="way-card">
+        <div class="way-tag mcp">MCP Server</div>
+        <h3>msw-mcp</h3>
+        <p>
+          A Model Context Protocol server. Register it once in your MCP client
+          and let your AI assistant manage mocks directly.
+        </p>
+        <pre><code set:html={mcpCode} /></pre>
+        <a href="/msw-mcp/overview" class="way-cta">msw-mcp docs →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA banner -->
+  <div class="cta-banner">
+    <h2>Ready to mock faster?</h2>
+    <p>
+      Set up msw-cli in under five minutes and start controlling your mocks from
+      any agent or terminal.
+    </p>
+    <div class="hero-actions">
+      <a href="/getting-started/installation" class="btn btn-primary">
+        Read the docs →
+      </a>
+      <a
+        href="https://github.com/JasonBoy/msw-mcp"
+        class="btn btn-secondary"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Star on GitHub ↗
+      </a>
+    </div>
+  </div>
+</StarlightPage>

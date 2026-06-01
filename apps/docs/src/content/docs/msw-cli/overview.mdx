@@ -1,0 +1,94 @@
+---
+title: msw-cli Overview
+description: A Playwright-style CLI for controlling Mock Service Worker in the browser from any terminal or AI agent.
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+**msw-cli** is a command-line interface that lets you — or an AI agent — add, update, remove, and reset MSW request handlers in a running browser tab without reloading the page.
+
+It uses the same session-based model as Playwright: open a session first, then drive handler operations against it.
+
+---
+
+## How it works
+
+```
+┌──────────────┐  HTTP /api/tools/*  ┌──────────────────────┐  WebSocket  ┌──────────────────┐
+│              │────────────────────►│                      │────────────►│                  │
+│  msw-cli     │                     │  @msw-mcp/core       │             │  Browser + MSW   │
+│  (terminal)  │                     │  daemon (port 6789)  │             │  service worker  │
+│              │◄────────────────────│                      │◄────────────│                  │
+└──────────────┘                     └──────────────────────┘             └──────────────────┘
+```
+
+1. **`msw-cli open`** spawns a background daemon that starts an HTTP + WebSocket server.
+2. Your browser app (with `@msw-mcp/client`) connects to the daemon over WebSocket.
+3. Subsequent CLI commands (`add`, `update`, `remove`, etc.) POST to the daemon's HTTP API, which forwards them to the browser over the open WebSocket.
+4. MSW executes the handler code in the browser context immediately.
+
+Session metadata (port, pid) is stored at `~/.msw-cli/sessions/`.
+
+---
+
+## Key features
+
+<CardGrid>
+  <Card title="No MCP required" icon="laptop">
+    Works in any terminal, CI script, or agent that can run shell commands. No
+    MCP client setup needed.
+  </Card>
+  <Card title="Playwright-style sessions" icon="list-format">
+    Open a named session per project directory. Multiple sessions can run
+    concurrently on different ports.
+  </Card>
+  <Card title="Auto port selection" icon="random">
+    If port 6789 is busy, `msw-cli open` auto-selects the next available port
+    and tells you to update your bridge URL.
+  </Card>
+  <Card title="Live handler evaluation" icon="rocket">
+    Handler code strings are evaluated in the browser context against the live
+    MSW worker — changes take effect instantly.
+  </Card>
+</CardGrid>
+
+---
+
+## Workflow at a glance
+
+```bash
+# New project? Print the full scaffolding guide first
+msw-cli setup
+
+# Start a session
+msw-cli open
+
+# Add a handler
+msw-cli add "http.get('/api/user', () => HttpResponse.json({ id: 1 }))"
+
+# Update an existing handler
+msw-cli update "/api/user" -h "http.get('/api/user', () => HttpResponse.json({ id: 2 }))"
+
+# Remove a handler
+msw-cli remove "/api/user"
+
+# Reset to base handlers
+msw-cli reset
+
+# Check connection and active handlers
+msw-cli status
+
+# Close the session
+msw-cli close
+```
+
+<Aside type="tip" title="AI agent usage">
+AI agents that can run shell commands (Claude Code, Cursor background agents, etc.) use `msw-cli` to drive mocks without needing MCP. The `msw-cli setup` output is designed to be fed directly to an AI as context.
+</Aside>
+
+---
+
+## Next steps
+
+- [Commands](/msw-cli/commands) — detailed reference for every command and flag
+- [Session Management](/msw-cli/sessions) — named sessions, concurrent environments, and cleanup

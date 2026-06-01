@@ -1,0 +1,195 @@
+---
+title: Installation
+description: Install msw-cli and msw-mcp and integrate the browser client into your project.
+---
+
+import { Tabs, TabItem, Steps, Aside } from '@astrojs/starlight/components';
+
+There are two tools to install depending on your use case:
+
+| Tool | Install | Best for |
+|------|---------|----------|
+| **msw-cli** | `npm install -g msw-cli` | Any agent, script, or terminal workflow |
+| **msw-mcp** | MCP config (see below) | AI assistants in Cursor, Claude Code, VS Code |
+
+Both tools require the [browser client](#2-install-the-browser-client) set up in your frontend app.
+
+---
+
+## 1. Install the CLI or MCP server
+
+<Tabs>
+  <TabItem label="msw-cli">
+
+```bash
+npm install -g msw-cli
+```
+
+Verify the installation:
+
+```bash
+msw-cli --version
+```
+
+  </TabItem>
+  <TabItem label="msw-mcp (Cursor)">
+
+Add to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "msw-mcp": {
+      "command": "npx",
+      "args": ["msw-mcp@latest"]
+    }
+  }
+}
+```
+
+  </TabItem>
+  <TabItem label="msw-mcp (Claude Code)">
+
+```bash
+claude mcp add msw-mcp npx msw-mcp@latest
+```
+
+  </TabItem>
+  <TabItem label="msw-mcp (VS Code)">
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "msw-mcp": {
+        "command": "npx",
+        "args": ["msw-mcp@latest"]
+      }
+    }
+  }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+---
+
+## 2. Install the browser client
+
+In your **frontend project**, install MSW and the `msw-mcp` package (which includes the browser bridge):
+
+```bash
+npm install -D msw@^2.11.0 msw-mcp
+```
+
+Initialize the MSW service worker:
+
+```bash
+npx msw init public/ --save
+```
+
+---
+
+## 3. Set up the mocks folder
+
+Create the following files in a `mocks/` directory at your project root.
+
+<Steps>
+
+1. **`mocks/handlers.js`** — your base API handlers:
+
+   ```javascript
+   import { http, HttpResponse } from 'msw';
+
+   export const handlers = [
+     // Add your static handlers here
+   ];
+   ```
+
+2. **`mocks/browser.js`** — the MSW worker setup:
+
+   ```javascript
+   import { setupWorker } from 'msw/browser';
+   import * as msw from 'msw';
+   import { handlers } from './handlers';
+
+   // Required: expose MSW utilities for the bridge
+   if (typeof window !== 'undefined') {
+     window.msw = msw;
+   }
+
+   export const worker = setupWorker(...handlers);
+   ```
+
+3. **`mocks/index.js`** — initialization with the WebSocket bridge:
+
+   ```javascript
+   import { enableMocking as enableMockingFromClient } from 'msw-mcp/client';
+   import { worker } from './browser';
+
+   export async function enableMocking() {
+     if (process.env.NODE_ENV !== 'development') return;
+
+     const isMSWEnabled =
+       process.env.ENABLE_MSW_MOCK === '1' ||
+       process.env.ENABLE_MSW_MOCK === 'true';
+
+     if (!isMSWEnabled) return;
+
+     const isWSEnabled =
+       process.env.ENABLE_MSW_WS_MOCK === '1' ||
+       process.env.ENABLE_MSW_WS_MOCK === 'true';
+
+     return enableMockingFromClient({
+       worker,
+       wsEnabled: isWSEnabled,
+       wsBridgeOptions: {
+         url: process.env.MCP_SERVER_URL || 'ws://localhost:6789',
+       },
+       workerOptions: { onUnhandledRequest: 'bypass' },
+     });
+   }
+   ```
+
+4. **Import in your app entry point:**
+
+   ```javascript
+   import { enableMocking } from '../mocks';
+
+   async function startApp() {
+     await enableMocking();
+     // ... rest of your app init
+   }
+
+   startApp();
+   ```
+
+5. **Create `.env.local`:**
+
+   ```bash
+   ENABLE_MSW_MOCK=true
+   ENABLE_MSW_WS_MOCK=true
+   MCP_SERVER_URL=ws://localhost:6789
+   ```
+
+6. **Add to `.gitignore`** (optional — for local-only custom handlers):
+
+   ```
+   mocks/custom-handlers/
+   !mocks/custom-handlers/index.example.js
+   ```
+
+</Steps>
+
+<Aside type="tip" title="Use /msw-setup for automatic scaffolding">
+If you're using `msw-mcp` in an MCP client, run `/msw-setup` to have the AI scaffold all of the above automatically — including framework detection and entry point integration.
+</Aside>
+
+---
+
+## Next steps
+
+- [Quick Start](/getting-started/quick-start) — add your first live mock in 5 minutes
+- [msw-cli Commands](/msw-cli/commands) — full CLI reference
+- [msw-mcp Tools](/msw-mcp/tools) — full MCP tool reference
