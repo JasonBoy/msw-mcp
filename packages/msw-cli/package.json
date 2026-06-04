@@ -1,0 +1,30 @@
+{
+  "name": "msw-cli",
+  "version": "1.0.6",
+  "description": "A CLI for AI agents to dynamically update Mock Service Worker (MSW) handlers.",
+  "type": "module",
+  "bin": {
+    "msw-cli": "./build/index.js"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build/"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "@msw-mcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "msw",
+    "cli"
+  ],
+  "license": "MIT"
+}

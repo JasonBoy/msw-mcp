@@ -1,0 +1,112 @@
+---
+title: msw-mcp Overview
+description: An MCP server that lets AI assistants control Mock Service Worker in the browser via the Model Context Protocol.
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+**msw-mcp** is a [Model Context Protocol](https://modelcontextprotocol.io/) server that gives AI assistants — in Cursor, Claude Code, VS Code, Windsurf, and other MCP clients — the ability to add, update, remove, and inspect MSW request handlers in a live browser tab.
+
+It shares the same WebSocket daemon as `msw-cli`, powered by `@msw-mcp/core`.
+
+---
+
+## Architecture
+
+```
+┌─────────────────┐  MCP (stdio)  ┌──────────────────────┐  WebSocket  ┌──────────────────┐
+│                 │──────────────►│                      │────────────►│                  │
+│  AI assistant   │               │  msw-mcp server      │             │  Browser + MSW   │
+│  (Cursor, etc.) │               │  (port 6789)         │             │  service worker  │
+│                 │◄──────────────│                      │◄────────────│                  │
+└─────────────────┘               └──────────────────────┘             └──────────────────┘
+```
+
+1. The AI assistant connects to `msw-mcp` over **stdio** using the MCP protocol.
+2. `msw-mcp` embeds an HTTP + WebSocket server from `@msw-mcp/core`.
+3. The browser app (with `@msw-mcp/client`) connects to the WebSocket.
+4. When the AI calls a tool (e.g., `msw_add_handlers`), the server forwards the handler code over WebSocket.
+5. MSW evaluates the handler code and the mock activates instantly.
+
+---
+
+## What the AI can do
+
+<CardGrid>
+  <Card title="Generate handlers from natural language" icon="pencil">
+    "Create a REST API for user management with CRUD operations" → AI writes and
+    applies the handler code.
+  </Card>
+  <Card title="Update existing mocks" icon="pencil">
+    "Make the /users endpoint return a 500 error" → AI calls
+    `msw_update_handlers` to replace the handler atomically.
+  </Card>
+  <Card title="Mock external APIs" icon="external">
+    "Mock the GitHub API to return fake repo data" → handlers for
+    `api.github.com` endpoints are injected into the service worker.
+  </Card>
+  <Card title="Inspect state" icon="information">
+    `msw_get_status` returns whether the browser is connected, the worker
+    status, and a summary of all active handlers.
+  </Card>
+</CardGrid>
+
+---
+
+## Five MCP tools
+
+| Tool | Purpose |
+|------|---------|
+| `msw_add_handlers` | Add handler code strings; optional `once` for one-time handlers |
+| `msw_update_handlers` | Replace handlers matching URL patterns (atomic) |
+| `msw_remove_handlers` | Remove handlers by URL patterns and optional HTTP methods |
+| `msw_reset_handlers` | Clear runtime handlers or set an explicit new list |
+| `msw_get_status` | Report browser connection and active handler list |
+
+See [MCP Tools](/msw-mcp/tools) for full parameter reference and examples.
+
+---
+
+## Automated setup with `/msw-setup`
+
+The `/msw-setup` prompt automatically scaffolds the frontend integration:
+
+```
+/msw-setup
+```
+
+The AI will:
+- Detect your framework (React, Vue, Svelte, vanilla JS, …)
+- Install `msw` and `msw-mcp` dependencies
+- Create the complete `mocks/` directory structure
+- Configure environment variables
+- Integrate with your app entry point
+- Migrate existing MSW setups if already present
+
+See [/msw-setup Prompt](/msw-mcp/prompt) for details.
+
+---
+
+## Supported MCP clients
+
+`msw-mcp` works with any MCP-compatible client that supports the stdio transport:
+
+- **Cursor**
+- **Claude Code** (`claude mcp add`)
+- **VS Code** (Copilot MCP)
+- **Windsurf**
+- **Cline / Roo Cline**
+- **Gemini CLI**
+- Any other client following the [MCP spec](https://modelcontextprotocol.io/)
+
+<Aside type="note">
+`msw-mcp` and `msw-cli` can be used simultaneously — they both talk to the same `@msw-mcp/core` daemon. If the daemon is already running, the other tool detects the existing port and connects to it.
+</Aside>
+
+---
+
+## Next steps
+
+- [MCP Tools](/msw-mcp/tools) — full tool parameter reference
+- [Configuration](/msw-mcp/configuration) — server flags and environment variables
+- [/msw-setup Prompt](/msw-mcp/prompt) — automated project scaffolding

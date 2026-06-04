@@ -1,0 +1,160 @@
+---
+title: MCP Tools
+description: Complete reference for all five MCP tools exposed by msw-mcp.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`msw-mcp` exposes five MCP tools that AI assistants can call to control MSW in the browser.
+
+---
+
+## `msw_add_handlers`
+
+Add one or more new request handlers to the browser service worker at runtime.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `handlers` | `string[]` | Yes | Array of handler code strings |
+| `once` | `boolean` | No | If `true`, each handler only intercepts the first matching request, then deactivates |
+
+**Available MSW utilities inside handler strings:**
+- `http` — `http.get`, `http.post`, `http.put`, `http.delete`, `http.patch`, …
+- `HttpResponse` — `HttpResponse.json`, `HttpResponse.text`, `HttpResponse.error`, …
+- `bypass` — bypass the handler and perform the real network request
+- `passthrough` — explicitly pass through to the network
+- `delay` — add a response delay (`await delay(500)`)
+
+**Example:**
+
+```json
+{
+  "handlers": [
+    "http.get('/api/users', () => HttpResponse.json([{ id: 1, name: 'Alice' }]))",
+    "http.post('/api/users', async ({ request }) => { const user = await request.json(); return HttpResponse.json({ ...user, id: Date.now() }, { status: 201 }) })"
+  ]
+}
+```
+
+**One-time handler:**
+
+```json
+{
+  "handlers": [
+    "http.get('/api/feature-flag', () => HttpResponse.json({ enabled: true }))"
+  ],
+  "once": true
+}
+```
+
+After the first request, the handler deactivates and subsequent requests pass through.
+
+<Aside type="tip" title="Handler priority">
+MSW evaluates handlers in order — the **first matching handler wins**. `msw_add_handlers` prepends new handlers in front of existing ones, so they always take priority over base handlers.
+</Aside>
+
+---
+
+## `msw_update_handlers`
+
+Replace handlers that match specified URL patterns. Atomic operation — matched handlers are removed and new handlers added in one step.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `patterns` | `string[]` | Yes | URL patterns to match existing handlers |
+| `handlers` | `string[]` | Yes | New handler code strings to replace matched handlers |
+| `methods` | `string[]` | No | Only update handlers matching these HTTP methods |
+
+**Update all methods for a pattern:**
+
+```json
+{
+  "patterns": ["/api/users"],
+  "handlers": ["http.get('/api/users', () => HttpResponse.json([]))"]
+}
+```
+
+**Update only GET, leave POST unchanged:**
+
+```json
+{
+  "patterns": ["/api/users"],
+  "handlers": ["http.get('/api/users', () => HttpResponse.json([]))"],
+  "methods": ["GET"]
+}
+```
+
+---
+
+## `msw_remove_handlers`
+
+Remove specific handlers by URL patterns and optional HTTP method filter.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `patterns` | `string[]` | Yes | URL patterns to match handlers for removal |
+| `methods` | `string[]` | No | Only remove handlers matching these HTTP methods |
+
+```json
+{ "patterns": ["/api/users"] }
+```
+
+```json
+{ "patterns": ["/api/users"], "methods": ["GET"] }
+```
+
+---
+
+## `msw_reset_handlers`
+
+Reset MSW handlers. Without `handlers`, removes all runtime handlers and restores the initial base handlers. With `handlers`, replaces the entire set.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `handlers` | `string[]` | No | New handler code strings to set after reset |
+
+```json
+{}
+```
+
+```json
+{
+  "handlers": ["http.get('/api/user', () => HttpResponse.json({ id: 1 }))"]
+}
+```
+
+---
+
+## `msw_get_status`
+
+Get the current status of the MSW service worker and all active handlers. No parameters.
+
+**Response:**
+
+```json
+{
+  "connected": true,
+  "workerStatus": "running",
+  "activeHandlers": [
+    "GET /api/users",
+    "POST /api/users",
+    "GET /api/products"
+  ],
+  "handlerCount": 3
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `connected` | `boolean` | Whether a browser tab is connected via WebSocket |
+| `workerStatus` | `string` | `"running"`, `"stopped"`, or `"unknown"` |
+| `activeHandlers` | `string[]` | Summary of active handlers (method + URL) |
+| `handlerCount` | `number` | Total number of active handlers |

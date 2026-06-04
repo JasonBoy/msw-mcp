@@ -1,0 +1,187 @@
+---
+title: Commands
+description: Complete reference for all msw-cli commands and flags.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Global flags
+
+All commands support the `-s, --session <name>` flag to target a specific named session. By default, the session name is derived from the current working directory.
+
+```bash
+msw-cli -s my-app <command>
+```
+
+---
+
+## `setup`
+
+Print the MSW project scaffolding guide for AI agents. Does not require an open session.
+
+```bash
+msw-cli setup
+msw-cli setup --framework vite
+msw-cli setup --framework next
+```
+
+| Flag | Description |
+|------|-------------|
+| `--framework <name>` | Hint the framework type (auto-detected if omitted) |
+
+The output is a step-by-step guide that an AI agent can follow to install dependencies, create the `mocks/` folder, configure environment variables, and integrate with your app entry point.
+
+---
+
+## `open`
+
+Start (or reuse) an MSW daemon session. **Required before** `add`, `update`, `remove`, `reset`, and `status`.
+
+```bash
+msw-cli open
+msw-cli open --port 6789
+msw-cli open -s my-app --port 6789
+```
+
+| Flag | Description |
+|------|-------------|
+| `-s, --session <name>` | Session name (default: current directory name) |
+| `--port <number>` | Bind to this exact port; fails if already in use |
+
+**Port behaviour:**
+- Without `--port`: tries 6789 first; auto-increments if busy and prints the new port.
+- With `--port`: strict — exits with an error if the port is in use.
+
+If a session is already running for this name, `open` reuses it and prints the existing port.
+
+---
+
+## `add <handlers...>`
+
+Add one or more new MSW handler code strings. Requires an open session.
+
+```bash
+msw-cli add "http.get('/api/user', () => HttpResponse.json({ id: 1 }))"
+
+# Multiple handlers at once
+msw-cli add \
+  "http.get('/api/users', () => HttpResponse.json([{ id: 1 }]))" \
+  "http.post('/api/users', async ({ request }) => { const body = await request.json(); return HttpResponse.json({ ...body, id: 2 }, { status: 201 }) })"
+```
+
+Handlers are prepended in front of existing runtime handlers. The first matching handler wins, so newly added handlers take priority over base handlers.
+
+**Available MSW utilities in handler strings:**
+- `http` — `http.get`, `http.post`, `http.put`, `http.delete`, `http.patch`, …
+- `HttpResponse` — `HttpResponse.json`, `HttpResponse.text`, `HttpResponse.error`, …
+- `bypass` — bypass the handler and perform the real network request
+- `passthrough` — explicitly pass the request through to the network
+- `delay` — add a response delay
+
+---
+
+## `update <patterns...>`
+
+Replace existing handlers that match specified URL patterns with new handler code. Atomic operation.
+
+```bash
+msw-cli update "/api/user" \
+  -h "http.get('/api/user', () => HttpResponse.json({ id: 2, name: 'Updated' }))"
+
+# Target a specific HTTP method
+msw-cli update "/api/user" --method GET \
+  -h "http.get('/api/user', () => HttpResponse.json({ id: 2 }))"
+```
+
+| Flag | Description |
+|------|-------------|
+| `-h, --handler <code>` | New handler code string to replace matched handlers |
+| `--method <METHOD>` | Only update handlers matching this HTTP method |
+
+---
+
+## `remove <patterns...>`
+
+Remove MSW handlers matching specified URL patterns.
+
+```bash
+msw-cli remove "/api/user"
+
+# Remove only GET handlers for a pattern
+msw-cli remove "/api/user" --method GET
+```
+
+| Flag | Description |
+|------|-------------|
+| `--method <METHOD>` | Only remove handlers matching this HTTP method |
+
+---
+
+## `reset [handlers...]`
+
+Reset MSW handlers. Without arguments, removes all runtime handlers and restores the initial base handlers. Optionally provide a new set of handlers to replace everything.
+
+```bash
+# Restore to base handlers only
+msw-cli reset
+
+# Replace all handlers with a new set
+msw-cli reset "http.get('/api/user', () => HttpResponse.json({ id: 1 }))"
+```
+
+---
+
+## `status`
+
+Print the current session status: daemon connection, browser WebSocket connection, and the list of active handlers.
+
+```bash
+msw-cli status
+```
+
+Example output:
+
+```
+Session:   my-project
+Port:      6789
+Daemon:    running
+Browser:   connected
+Handlers:
+  GET /api/user
+  POST /api/users
+```
+
+---
+
+## Session management commands
+
+These commands do not require an open session.
+
+### `list`
+
+List all active sessions and their ports.
+
+```bash
+msw-cli list
+```
+
+### `close [session]`
+
+Close a specific session (or the current directory's session if omitted).
+
+```bash
+msw-cli close
+msw-cli close my-app
+```
+
+### `close-all`
+
+Close all active sessions.
+
+```bash
+msw-cli close-all
+```
+
+<Aside type="note">
+Running `add`, `update`, `remove`, `reset`, or `status` without a prior `open` exits immediately with instructions to run `msw-cli open` first.
+</Aside>

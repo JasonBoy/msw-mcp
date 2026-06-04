@@ -1,222 +1,93 @@
-# MSW MCP Server
+# MSW AI Agent Bridge Monorepo
 
-A Model Context Protocol (MCP) server that enables AI-driven control of [Mock Service Worker (MSW)](https://mswjs.io/) in browser environments. This server acts as a bridge between AI assistants and MSW service workers, allowing dynamic API mocking through intelligent handler generation and real-time updates.
+This monorepo provides a suite of tools that bridge AI agents with Mock Service Worker (MSW). It enables dynamic addition, updating, and removal of MSW network mocks directly from a command-line interface or AI tool execution, completely independently of the application source code restarts.
 
-## Demo
+## Structure
 
-https://github.com/user-attachments/assets/06959759-b198-4cd1-ae2b-11ede32acd8e
+This project is set up as a monorepo using `pnpm` and `turbo`.
 
-## Key Features
+- **`apps/docs`** (`@msw-mcp/docs`): Starlight documentation site for MSW Agent Tools (CLI, MCP, guides). Source lives under `apps/docs/src/content/docs/`.
+- **`packages/msw-cli`**: The command-line interface (`msw-cli`) used by AI agents or developers to send dynamic handler updates. Run `msw-cli setup` to scaffold a project, then `msw-cli open` plus handler commands.
+- **`packages/msw-mcp`**: The published Model Context Protocol server (`msw-mcp`) so assistants can manage mocks via MCP tools.
+- **`packages/client`** (`@msw-mcp/client`): The browser/environment client that listens for updates and registers them with the local MSW setup.
+- **`packages/core`** (`@msw-mcp/core`): The core daemon process and session management logic that brokers communication between the CLI or MCP server and the client.
 
-- 🤖 **AI-powered mock generation** - Generate MSW handlers from natural language
-- ⚡ **Real-time updates** - Modify API mocks without reloading the page
-- 🌉 **WebSocket bridge** - Seamless communication between AI and browser
-- 🛠️ **Automated setup** - Use `/msw-setup` prompt for instant project scaffolding
+## Documentation site
 
-## Architecture
+From the repo root:
 
+```bash
+pnpm --filter @msw-mcp/docs dev
 ```
-┌─────────────────┐    MCP Protocol    ┌─────────────────────┐    WebSocket    ┌──────────────────┐
-│                 │◄──────────────────►│                     │◄───────────────►│                  │
-│   AI Assistant  │                    │   MSW MCP Server    │                 │  Browser MSW     │
-│   (Claude etc.) │                    │                     │                 │  Service Worker  │
-│                 │                    │                     │                 │                  │
-└─────────────────┘                    └─────────────────────┘                 └──────────────────┘
-```
+
+Opens the local docs dev server (default Astro port, often `http://localhost:4321`). Production search (Pagefind) is easiest to verify after `pnpm --filter @msw-mcp/docs build` and `pnpm --filter @msw-mcp/docs preview`.
+
+More detail: [apps/docs/README.md](apps/docs/README.md).
+
+## Quick setup: msw-cli
+
+1. Install the CLI globally: `npm install -g msw-cli` (or use your package manager’s equivalent).
+2. In a new project, run **`msw-cli setup`** and follow the printed steps for MSW + `@msw-mcp/client`.
+3. Start a session, then drive handlers from the shell:
+
+   ```bash
+   msw-cli open
+   msw-cli add "http.get('/api/user', () => HttpResponse.json({ id: 1 }))"
+   msw-cli status
+   msw-cli close
+   ```
+
+Full command reference, flags, and workflows: [packages/msw-cli/README.md](packages/msw-cli/README.md).
+
+## Quick setup: msw-mcp (MCP)
+
+1. Register the server in your MCP client (example for JSON config):
+
+   ```json
+   {
+     "mcpServers": {
+       "msw-mcp": {
+         "command": "npx",
+         "args": ["msw-mcp@latest"]
+       }
+     }
+   }
+   ```
+
+2. In the client, use the **`/msw-setup`** prompt (or follow manual steps) so the browser app loads `msw`, `@msw-mcp/client`, and the worker bridge.
+
+Installation options (VS Code, Claude Code, Cursor, etc.), architecture, and manual setup: [packages/msw-mcp/README.md](packages/msw-mcp/README.md).
+
+## Development Scripts
+
+Run these scripts from the root directory using `pnpm`:
+
+- **`pnpm build`**: Compiles all packages using Turborepo.
+- **`pnpm dev`**: Starts the development pipelines for all packages.
+- **`pnpm format`**: Formats the code using Prettier.
+- **`pnpm lint`**: Runs linting checks across the repository.
 
 ## Getting Started
 
-### Installation
+1. **Install dependencies:**
 
-**Standard configuration (works with most MCP clients):**
+   ```bash
+   pnpm install
+   ```
 
-```json
-{
-  "mcpServers": {
-    "msw-mcp": {
-      "command": "npx",
-      "args": ["msw-mcp@latest"]
-    }
-  }
-}
-```
+2. **Build the project:**
 
-**Quick install links for vscode:**
+   ```bash
+   pnpm build
+   ```
 
-[![Install in VS Code](https://img.shields.io/badge/VS%20Code-Install-blue?logo=visualstudiocode)](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522msw-mcp%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522msw-mcp%2540latest%2522%255D%257D)
-[![Install in VS Code Insiders](https://img.shields.io/badge/VS%20Code%20Insiders-Install-purple?logo=visualstudiocode)](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522msw-mcp%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522msw-mcp%2540latest%2522%255D%257D)
+3. **Use the CLI:**  
+   You can navigate to the CLI directory or use it directly via node after building:
 
-**Claude Code:**
-
-Use the Claude Code CLI to add the MSW MCP server:
-
-```bash
-claude mcp add msw-mcp npx msw-mcp@latest
-```
-
-Also supports: Cursor, Gemini-cli, Windsurf, Cline, Roo Cline, and other MCP-compatible clients.
-
-### Quick Setup
-
-Use the `/msw-setup` prompt in your MCP client to automatically configure your project:
-
-```
-/msw-setup
-```
-
-This will:
-
-- Auto-detect your framework (React, Vue, Svelte, etc.)
-- Install required dependencies (`msw` and `msw-mcp`)
-- Create the complete mocks directory structure
-- Configure environment variables
-- Integrate with your app entry point
-
-<details>
-<summary>Manual Setup</summary>
-
-If you prefer manual configuration:
-
-```bash
-# Install dependencies
-npm install -D msw msw-mcp
-
-# Initialize MSW service worker
-npx msw init public/ --save
-```
-
-Create `mocks/index.js`:
-
-```javascript
-import { enableMocking } from 'msw-mcp/client';
-import { setupWorker } from 'msw/browser';
-
-const worker = setupWorker();
-
-export async function initMocks() {
-  if (process.env.NODE_ENV !== 'development') return;
-
-  await enableMocking({
-    worker,
-    wsEnabled: true,
-    wsBridgeOptions: {
-      url: 'ws://localhost:6789',
-    },
-  });
-}
-```
-
-Import in your app entry:
-
-```javascript
-import { initMocks } from './mocks';
-
-initMocks().then(() => {
-  // Start your app
-});
-```
-
-</details>
-
-## MCP Tools
-
-### `msw_add_handlers`
-
-Add new request handlers dynamically:
-
-```javascript
-// Example usage from AI
-'Create a GET /users endpoint that returns a list of users';
-// Generates: http.get('/users', () => HttpResponse.json([...]))
-```
-
-### `msw_get_status`
-
-Check current MSW status and active handlers.
-
-### `msw_update_handlers`
-
-Update existing handlers by URL pattern and optional HTTP methods (e.g., `methods: ['GET', 'POST']`).
-
-### `msw_remove_handlers`
-
-Remove handlers by URL pattern and optional HTTP methods (e.g., `methods: ['GET']` to remove only GET handlers).
-
-### `msw_reset_handlers`
-
-Reset all handlers to initial state.
-
-See [DOCUMENTATION.md](./DOCUMENTATION.md) for detailed API reference.
-
-## Configuration
-
-### Server Arguments
-
-- `--mock-ws-port=<port>` - WebSocket server port (default: 6789)
-- `--persist-handlers` - Save handlers across page refreshes (or `--persist-handlers=10` persists only 10 most recent handlers)
-- `--single-client` - Only broadcast to the most recent tab
-
-### Environment Variables for client bridge
-
-> Since they are just envs used in the generated setup code, you can customize them as needed.
-
-Create `.env.local`:
-
-```bash
-ENABLE_MSW_MOCK=true
-ENABLE_MSW_WS_MOCK=true
-MCP_SERVER_URL=ws://localhost:6789
-```
-
-## Usage Examples
-
-**Generate a REST API:**
-
-```
-"Create a REST API for user management with CRUD operations"
-```
-
-**Mock external APIs:**
-
-```
-"Mock the GitHub API to return fake repository data"
-```
-
-**Test error scenarios:**
-
-```
-"Make the /users endpoint return a 500 error"
-```
-
-## Development
-
-```bash
-npm run build     # Build TypeScript
-npm run dev       # Build and run
-npm run start     # Run built server
-```
-
-## Documentation
-
-For detailed documentation including:
-
-- Complete API reference
-- WebSocket protocol details
-- Advanced configuration options
-- Frontend integration guide
-- Debugging tips
-
-See [DOCUMENTATION.md](./DOCUMENTATION.md)
-
-## Contributing
-
-Contributions are welcome! Please see [DOCUMENTATION.md](./DOCUMENTATION.md) for detailed development information.
+   ```bash
+   node packages/msw-cli/build/index.js help
+   ```
 
 ## License
 
-MIT License
-
-## Related Projects
-
-- [Model Context Protocol](https://modelcontextprotocol.io/) - Protocol specification
-- [Mock Service Worker](https://mswjs.io/) - API mocking library
+This project is licensed under the MIT License — see [LICENSE](LICENSE).

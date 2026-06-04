@@ -1,0 +1,349 @@
+/* Brand accent colour */
+:root {
+  --sl-color-accent-low: #3b0764;
+  --sl-color-accent: #7c3aed;
+  --sl-color-accent-high: #c4b5fd;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #ede9fe;
+  --sl-color-accent: #7c3aed;
+  --sl-color-accent-high: #5b21b6;
+}
+
+/* Hide Starlight's auto-rendered page title on the custom landing page.
+   h1 is in the first .content-panel; .hero-wrapper is in the second.
+   Use body:has(.hero-wrapper) to scope to the landing page only. */
+body:has(.hero-wrapper) .content-panel:first-child {
+  display: none;
+}
+
+/* ── Landing page ─────────────────────────────────────────────────────────── */
+
+.hero-wrapper {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 5rem 1.5rem 4rem;
+  text-align: center;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--sl-color-accent);
+  color: var(--sl-color-accent-high);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  background: color-mix(in srgb, var(--sl-color-accent) 8%, transparent);
+}
+
+.hero-title {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--sl-color-white);
+  margin: 0 0 1.25rem;
+}
+
+.hero-title span {
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.2rem;
+  line-height: 1.65;
+  color: var(--sl-color-gray-2);
+  max-width: 42rem;
+  margin: 0 auto 2.5rem;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.85rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.4rem;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+
+.btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--sl-color-accent);
+  color: #fff;
+}
+
+.btn-secondary {
+  border: 1px solid var(--sl-color-gray-5);
+  color: var(--sl-color-white);
+  background: color-mix(in srgb, var(--sl-color-gray-6) 50%, transparent);
+}
+
+.hero-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--sl-color-black);
+  border: 1px solid var(--sl-color-gray-6);
+  border-radius: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  font-family: var(--sl-font-mono, monospace);
+  font-size: 0.9rem;
+  color: var(--sl-color-gray-2);
+}
+
+.hero-install .prompt {
+  color: var(--sl-color-accent-high);
+  user-select: none;
+}
+
+.hero-install .cmd {
+  color: var(--sl-color-white);
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+
+.section {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-accent-high);
+  margin-bottom: 0.6rem;
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--sl-color-white);
+  margin: 0 0 0.75rem;
+}
+
+.section-desc {
+  font-size: 1.05rem;
+  color: var(--sl-color-gray-2);
+  max-width: 36rem;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--sl-color-gray-6);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* ── Features grid ────────────────────────────────────────────────────────── */
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1.25rem;
+  margin-top: 3rem;
+  align-items: stretch;
+}
+
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  background: var(--sl-color-black);
+  border: 1px solid var(--sl-color-gray-6);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  transition: border-color 0.15s;
+}
+
+.feature-card:hover {
+  border-color: var(--sl-color-accent);
+}
+
+.feature-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.feature-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--sl-color-white);
+  margin: 0 0 0.4rem;
+}
+
+.feature-card p {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--sl-color-gray-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Two ways ─────────────────────────────────────────────────────────────── */
+
+.two-ways-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+@media (max-width: 768px) {
+  .two-ways-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.way-card {
+  background: var(--sl-color-black);
+  border: 1px solid var(--sl-color-gray-6);
+  border-radius: 0.75rem;
+  padding: 1.75rem;
+}
+
+.way-card.featured {
+  border-color: var(--sl-color-accent);
+  background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-black));
+}
+
+.way-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  margin-bottom: 0.75rem;
+}
+
+.way-tag.cli {
+  background: color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
+  color: var(--sl-color-accent-high);
+  border: 1px solid var(--sl-color-accent);
+}
+
+.way-tag.mcp {
+  background: color-mix(in srgb, #2563eb 12%, transparent);
+  color: #93c5fd;
+  border: 1px solid #2563eb;
+}
+
+.way-card h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--sl-color-white);
+  margin: 0 0 0.4rem;
+}
+
+.way-card > p {
+  font-size: 0.9rem;
+  color: var(--sl-color-gray-2);
+  margin: 0 0 1.25rem;
+}
+
+.way-card pre {
+  background: color-mix(in srgb, var(--sl-color-gray-7, #111) 80%, transparent);
+  border: 1px solid var(--sl-color-gray-6);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.way-card code {
+  font-family: var(--sl-font-mono, monospace);
+  color: var(--sl-color-gray-2);
+}
+
+.line-comment {
+  color: var(--sl-color-gray-4);
+}
+
+.line-cmd {
+  color: var(--sl-color-white);
+}
+
+.line-str {
+  color: #86efac;
+}
+
+.way-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--sl-color-accent-high);
+  transition: gap 0.15s;
+}
+
+.way-cta:hover {
+  gap: 0.6rem;
+}
+
+/* ── CTA banner ───────────────────────────────────────────────────────────── */
+
+.cta-banner {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sl-color-accent) 15%, var(--sl-color-black)) 0%,
+    var(--sl-color-black) 100%
+  );
+  border: 1px solid var(--sl-color-accent);
+  border-radius: 1rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  max-width: 72rem;
+  margin: 0 auto 4rem;
+}
+
+.cta-banner h2 {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--sl-color-white);
+  margin: 0 0 0.6rem;
+}
+
+.cta-banner > p {
+  color: var(--sl-color-gray-2);
+  margin: 0 0 2rem;
+}

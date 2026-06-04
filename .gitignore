@@ -7,6 +7,7 @@ yarn-error.log*
 # Build outputs
 build/
 dist/
+.turbo/
 *.tsbuildinfo
 
 # Environment variables
@@ -97,3 +98,5 @@ jspm_packages/
 
 # Claude Code specific (only ignore local settings)
 .claude/local_settings.json
+.playwright-cli/
+.pnpm-store/

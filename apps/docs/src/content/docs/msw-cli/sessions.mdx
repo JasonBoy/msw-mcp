@@ -1,0 +1,118 @@
+---
+title: Session Management
+description: How msw-cli sessions work, including naming, concurrent sessions, and cleanup.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Sessions are the core concept in msw-cli. A **session** is a named, running daemon process that holds a WebSocket port and tracks the connected browser tab.
+
+---
+
+## How sessions work
+
+When you run `msw-cli open`, it:
+
+1. Derives a session name from the current working directory (e.g., `my-project`).
+2. Checks `~/.msw-cli/sessions/` for an existing session with that name.
+3. If one exists and the daemon is still alive, it reuses the existing port and prints it.
+4. If none exists (or the daemon died), it starts a new `@msw-mcp/core` daemon process, picks a port, and saves the session metadata.
+
+Session metadata is stored as JSON files under `~/.msw-cli/sessions/`:
+
+```
+~/.msw-cli/sessions/
+├── my-project.json
+└── another-app.json
+```
+
+---
+
+## Naming sessions
+
+By default, the session name is the **basename of the current working directory**.
+
+Override it with `-s, --session <name>`:
+
+```bash
+# Name the session explicitly
+msw-cli open -s staging
+
+# Then target the same session from any directory
+msw-cli -s staging add "http.get('/api/flag', () => HttpResponse.json({ enabled: true }))"
+msw-cli -s staging status
+msw-cli -s staging close
+```
+
+This is useful when you want a consistent session name regardless of where you run the command.
+
+---
+
+## Concurrent sessions
+
+Multiple sessions can run simultaneously on different ports:
+
+```bash
+# Project A on port 6789 (default)
+cd ~/projects/app-a
+msw-cli open
+
+# Project B auto-selects the next available port
+cd ~/projects/app-b
+msw-cli open
+# → [MSW] Daemon started on ws://localhost:6790
+```
+
+Each browser tab connects to its own daemon via `MCP_SERVER_URL` in `.env.local`.
+
+---
+
+## Using a fixed port
+
+If your app is configured with a hardcoded `MCP_SERVER_URL`, pass `--port` to enforce the exact port:
+
+```bash
+msw-cli open --port 6789
+```
+
+With `--port`, the command fails immediately if the port is already in use. Without `--port`, it auto-increments.
+
+---
+
+## Listing and closing sessions
+
+```bash
+# See all active sessions
+msw-cli list
+
+# Close the current directory's session
+msw-cli close
+
+# Close a specific named session
+msw-cli close staging
+
+# Nuke all sessions at once
+msw-cli close-all
+```
+
+<Aside type="tip">
+If a daemon process crashes unexpectedly, its session file may remain stale in `~/.msw-cli/sessions/`. Running `msw-cli close-all` or deleting the stale file manually will clean it up. A subsequent `msw-cli open` will detect the dead process and start fresh.
+</Aside>
+
+---
+
+## Session isolation for CI
+
+To prevent cross-test interference in CI, use a unique session name per job:
+
+```bash
+msw-cli open -s "ci-job-$CI_JOB_ID" --port "$MSW_PORT"
+# ... run tests ...
+msw-cli close -s "ci-job-$CI_JOB_ID"
+```
+
+---
+
+## Session storage location
+
+All metadata lives in `~/.msw-cli/sessions/`. This directory is created automatically on first use. You can safely delete it to clear all session state — equivalent to `msw-cli close-all`.
