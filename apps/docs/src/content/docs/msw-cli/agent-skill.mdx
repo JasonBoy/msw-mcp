@@ -1,0 +1,76 @@
+---
+title: Agent skill
+description: Install the msw-cli Cursor agent skill from this repo using npx skills.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The **msw-cli** [agent skill](https://cursor.com/docs/skills) lives in this repository under `skills/msw-cli/`. It teaches Cursor (and other supported agents) how to run `msw-cli` sessions, quoting rules, and troubleshooting.
+
+Install it with the [open Agent Skills CLI](https://github.com/vercel-labs/skills) (`npx skills …`). The first argument is a **GitHub repo** in `owner/repo` form, not the skill folder name by itself.
+
+---
+
+## Install
+
+From your machine (any directory; use `-g` if you want a user-wide install — see the CLI `--help`):
+
+<Steps>
+
+1. **List skills** available in this repo (optional):
+
+   ```bash
+   npx skills add JasonBoy/msw-mcp --list
+   ```
+
+2. **Install only the `msw-cli` skill** (recommended):
+
+   ```bash
+   npx skills add JasonBoy/msw-mcp --skill msw-cli
+   ```
+
+   If you use a fork, replace `JasonBoy/msw-mcp` with `your-username/your-fork`.
+
+3. **Follow the prompts** in the terminal to pick install scope (project vs global) and symlink vs copy. After that, Cursor discovers the skill from its skills directory.
+
+</Steps>
+
+### One-line reference
+
+```bash
+npx skills add <owner>/<repo> --skill msw-cli
+```
+
+Here `<owner>/<repo>` is the GitHub shorthand for **this** repository (for example `JasonBoy/msw-mcp`). The skill name `msw-cli` matches the folder under `skills/` and the `name` field in `skills/msw-cli/SKILL.md`.
+
+### Alternative: direct URL to the skill path
+
+You can also point at the skill directory on the default branch:
+
+```bash
+npx skills add https://github.com/JasonBoy/msw-mcp/tree/main/skills/msw-cli
+```
+
+(Adjust branch name if yours is not `main`.)
+
+---
+
+## Related skill
+
+This repo also ships **`msw-setup`** under `skills/msw-setup/` for scaffolding MSW + `@msw-mcp/client`. Install it with:
+
+```bash
+npx skills add JasonBoy/msw-mcp --skill msw-setup
+```
+
+---
+
+## More help
+
+- Full CLI options (`--list`, `-g`, `-a`, `-y`, …): [vercel-labs/skills](https://github.com/vercel-labs/skills)
+- How skills work in Cursor: [Agent Skills](https://cursor.com/docs/skills) (Cursor documentation)
+
+<Aside type="note" title="CLI vs skill">
+  Installing the skill does **not** install `msw-cli` on your PATH. Install the
+  CLI separately — see [Installation](/getting-started/installation).
+</Aside>

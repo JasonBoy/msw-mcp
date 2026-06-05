@@ -5,7 +5,7 @@ A Model Context Protocol (MCP) server that enables AI-driven control of Mock Ser
 **Includes:**
 
 - 🖥️ **MCP Server** - WebSocket server for AI ↔ Browser communication
-- 📦 **Client Package** (`msw-mcp/client`) - Importable browser-side integration
+- 📦 **Client Package** (`@msw-mcp/client`) - Importable browser-side integration
 - 🤖 **`/msw-setup` Prompt** - Automated project scaffolding
 
 ## 🎯 Overview
@@ -345,20 +345,20 @@ The easiest way to set up MSW with AI-driven handler support is using the `/msw-
 The AI will automatically:
 
 - ✅ Detect your framework (React, Vue, Svelte, etc.)
-- ✅ Install dependencies (`msw` and `msw-mcp`)
+- ✅ Install dependencies (`msw` and `@msw-mcp/client`)
 - ✅ Create complete mocks directory structure
 - ✅ Configure environment variables
 - ✅ Integrate with your app entry point
 - ✅ Handle migration if MSW is already set up
 
-For existing MSW setups, it will migrate to use `msw-mcp/client` while preserving your existing handlers.
+For existing MSW setups, it will migrate to use `@msw-mcp/client` while preserving your existing handlers.
 
 ### Manual Frontend Integration
 
 If you prefer manual setup, install the client package:
 
 ```bash
-npm install -D msw-mcp
+npm install -D msw @msw-mcp/client
 ```
 
 #### New Project Setup
@@ -414,7 +414,7 @@ export const worker = setupWorker(...handlers);
 **`mocks/index.js`** - Initialization with WebSocket bridge:
 
 ```javascript
-import { enableMocking as enableMockingFromClient } from 'msw-mcp/client';
+import { initMocking } from '@msw-mcp/client';
 import { worker } from './browser';
 
 export async function enableMocking() {
@@ -435,7 +435,7 @@ export async function enableMocking() {
     process.env.ENABLE_MSW_WS_MOCK === '1' ||
     process.env.ENABLE_MSW_WS_MOCK === 'true';
 
-  return enableMockingFromClient({
+  return initMocking({
     worker,
     wsEnabled: isWSEnabled,
     wsBridgeOptions: {
@@ -487,12 +487,12 @@ startApp();
 
 #### Client API Reference
 
-**`enableMocking(options)`**
+**`initMocking(options)`**
 
 Main setup function that starts MSW worker and initializes WebSocket bridge.
 
 ```typescript
-interface EnableMockingOptions {
+interface InitMockingOptions {
   worker: any; // MSW worker instance (required)
   wsEnabled?: boolean; // Enable WebSocket bridge (default: true)
   wsBridgeOptions?: {

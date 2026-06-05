@@ -2,16 +2,7 @@
 
 A Model Context Protocol (MCP) server that enables AI-driven control of [Mock Service Worker (MSW)](https://mswjs.io/) in browser environments. This server acts as a bridge between AI assistants and MSW service workers, allowing dynamic API mocking through intelligent handler generation and real-time updates.
 
-## Demo
-
-https://github.com/user-attachments/assets/06959759-b198-4cd1-ae2b-11ede32acd8e
-
-## Key Features
-
-- 🤖 **AI-powered mock generation** - Generate MSW handlers from natural language
-- ⚡ **Real-time updates** - Modify API mocks without reloading the page
-- 🌉 **WebSocket bridge** - Seamless communication between AI and browser
-- 🛠️ **Automated setup** - Use `/msw-setup` prompt for instant project scaffolding
+**Demo video and full feature overview** (whole monorepo): see the [repository README](../../README.md#demo).
 
 ## Architecture
 
@@ -79,24 +70,25 @@ If you prefer manual configuration:
 
 ```bash
 # Install dependencies
-npm install -D msw msw-mcp
+npm install -D msw @msw-mcp/client
 
 # Initialize MSW service worker
 npx msw init public/ --save
 ```
 
-Create `mocks/index.js`:
+Create `mocks/index.js` (after `mocks/handlers.js` with at least one handler, or use an empty `export const handlers = []`):
 
 ```javascript
-import { enableMocking } from 'msw-mcp/client';
+import { initMocking } from '@msw-mcp/client';
 import { setupWorker } from 'msw/browser';
+import { handlers } from './handlers';
 
-const worker = setupWorker();
+const worker = setupWorker(...handlers);
 
 export async function initMocks() {
   if (process.env.NODE_ENV !== 'development') return;
 
-  await enableMocking({
+  await initMocking({
     worker,
     wsEnabled: true,
     wsBridgeOptions: {

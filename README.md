@@ -2,6 +2,24 @@
 
 This monorepo provides a suite of tools that bridge AI agents with Mock Service Worker (MSW). It enables dynamic addition, updating, and removal of MSW network mocks directly from a command-line interface or AI tool execution, completely independently of the application source code restarts.
 
+## Demo
+
+Walkthrough of the MCP-driven MSW workflow (browser bridge, live handler updates):
+
+https://github.com/user-attachments/assets/06959759-b198-4cd1-ae2b-11ede32acd8e
+
+## Key features
+
+- 🤖 **AI-assisted handlers** — Describe or paste intent; assistants generate MSW handlers (`http.*`, `HttpResponse`, etc.) without editing app source for every tweak.
+- ⚡ **Live mocks** — Add, update, remove, or reset handlers while the dev app stays open; no restart required for handler changes delivered over the bridge.
+- 🌉 **WebSocket bridge** — [`@msw-mcp/core`](packages/core) brokers MCP (stdio) ↔ browser [`@msw-mcp/client`](packages/client) so the worker stays the single interception point.
+- 🛠️ **`/msw-setup` prompt** — MCP-hosted setup flow scaffolds `msw`, client bridge, env hints, and mocks layout for common frameworks.
+- 🎛️ **MCP tool surface** — `msw_add_handlers`, `msw_update_handlers`, `msw_remove_handlers`, `msw_reset_handlers`, `msw_get_status` for structured control from any MCP client.
+- 💻 **`msw-cli`** — Same dynamic mocking from the terminal or scripts (`setup`, `open`, handler commands) when you are not using MCP.
+- ⚙️ **Operator-friendly server flags** — Configurable WebSocket port (`--mock-ws-port`), optional handler persistence across reloads (`--persist-handlers`), and optional single-tab targeting (`--single-client`) on [`msw-mcp`](packages/msw-mcp).
+- 📚 **Docs site** — Starlight site under [`apps/docs`](apps/docs) for CLI, MCP, and integration guides.
+- ✨ **Agent skills (optional)** — [`skills/msw-cli`](skills/msw-cli) and [`skills/msw-setup`](skills/msw-setup) for Cursor-style agents that load `SKILL.md` guidance alongside the tools.
+
 ## Structure
 
 This project is set up as a monorepo using `pnpm` and `turbo`.
@@ -56,7 +74,7 @@ Full command reference, flags, and workflows: [packages/msw-cli/README.md](packa
 
 2. In the client, use the **`/msw-setup`** prompt (or follow manual steps) so the browser app loads `msw`, `@msw-mcp/client`, and the worker bridge.
 
-Installation options (VS Code, Claude Code, Cursor, etc.), architecture, and manual setup: [packages/msw-mcp/README.md](packages/msw-mcp/README.md).
+Installation options (VS Code, Claude Code, Cursor, etc.), architecture, MCP tools, and manual setup: [packages/msw-mcp/README.md](packages/msw-mcp/README.md).
 
 ## Development Scripts
 
