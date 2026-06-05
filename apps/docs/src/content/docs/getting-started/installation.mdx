@@ -1,22 +1,45 @@
 ---
 title: Installation
-description: Install msw-cli and msw-mcp and integrate the browser client into your project.
+description: Install msw-cli or msw-mcp, add @msw-mcp/client in your app, and wire up the browser bridge.
 ---
 
-import { Tabs, TabItem, Steps, Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 There are two tools to install depending on your use case:
 
-| Tool | Install | Best for |
-|------|---------|----------|
-| **msw-cli** | `npm install -g msw-cli` | Any agent, script, or terminal workflow |
-| **msw-mcp** | MCP config (see below) | AI assistants in Cursor, Claude Code, VS Code |
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Tool</th>
+      <th scope="col">Install</th>
+      <th scope="col">Best for</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <strong>msw-cli</strong>
+      </td>
+      <td>
+        <code>npm install -g msw-cli</code>
+      </td>
+      <td>Any agent, script, or terminal workflow</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>msw-mcp</strong>
+      </td>
+      <td>MCP config (see below)</td>
+      <td>AI assistants in Cursor, Claude Code, VS Code</td>
+    </tr>
+  </tbody>
+</table>
 
-Both tools require the [browser client](#2-install-the-browser-client) set up in your frontend app.
+Both tools require the [browser client](#browser-client) wired up in your frontend app.
 
 ---
 
-## 1. Install the CLI or MCP server
+<h2 id="install-cli-or-mcp">1. Install the CLI or MCP server</h2>
 
 <Tabs>
   <TabItem label="msw-cli">
@@ -75,27 +98,62 @@ claude mcp add msw-mcp npx msw-mcp@latest
 
 ---
 
-## 2. Install the browser client
+<h2 id="browser-client">2. Set up the browser client</h2>
 
-In your **frontend project**, install MSW and the `msw-mcp` package (which includes the browser bridge):
+Your web app needs **`msw`**, **`@msw-mcp/client`**, a generated service worker, and a small **`mocks/`** bridge so the CLI or MCP server can push handlers over WebSocket. **Prefer an AI-assisted flow first** — a coding agent runs `msw-cli setup` or `/msw-setup` and applies the printed steps (packages, `msw init`, files, env, entry wiring). Use **manual setup** when you want to do every step yourself.
 
-```bash
-npm install -D msw@^2.11.0 msw-mcp
+### Recommended: scaffolding
+
+Pick the path that matches how you work:
+
+**Coding assistant + `msw-cli setup`**
+
+`msw-cli setup` **only prints** setup instructions to the terminal (a scaffold guide for your stack). It does **not** install packages, write files, or edit your app by itself. If you run it alone, you mostly get a checklist — you still need to follow it (or use **manual setup** below).
+
+**What to do instead:** in your **frontend project**, ask your AI (Cursor Agent, Claude Code, etc.) to:
+
+1. Run **`msw-cli setup`** from the project root (with [`msw-cli` installed globally](#install-cli-or-mcp)). Optional hints: `msw-cli setup --framework vite` or `msw-cli setup --help` for flags.
+
+   ```bash
+   msw-cli setup
+   ```
+
+2. **Treat the command output as the source of truth** and continue the conversation so the assistant implements each step: add `msw` / `@msw-mcp/client`, run `npx msw init …`, create `mocks/`, set env files, and wire your entry point — matching what the printed guide says for your framework.
+
+If your assistant cannot run shell commands, run `msw-cli setup` yourself and **paste the full output** into chat, then ask the assistant to perform the setup based on that output.
+
+**No `msw-cli open` session** is required for `setup` (that command is only for live handler control after the app is wired up).
+
+**AI assistant — `/msw-setup` (MCP)**
+
+If **`msw-mcp`** is already configured in your MCP client, open a chat in that project and run:
+
+```
+/msw-setup
 ```
 
-Initialize the MSW service worker:
+The assistant scaffolds the same pieces end to end (install, `msw init`, `mocks/`, `.env.local`, entry wiring). See the [/msw-setup Prompt](/msw-mcp/prompt) page for behavior and optional arguments.
+
+---
+
+<details>
+<summary>Manual setup — expand for install commands and mocks/ walkthrough</summary>
+
+Use this when you want full control or are migrating an existing MSW layout.
+
+In your **frontend project**, install MSW and the published browser bridge **`@msw-mcp/client`** (the **`msw-mcp`** npm package is only the MCP **server** you run with `npx msw-mcp`, not the browser library):
+
+```bash
+npm install -D msw@^2.11.0 @msw-mcp/client
+```
+
+Initialize the MSW service worker (adjust `public/` if your bundler uses another static dir):
 
 ```bash
 npx msw init public/ --save
 ```
 
----
-
-## 3. Set up the mocks folder
-
-Create the following files in a `mocks/` directory at your project root.
-
-<Steps>
+Then create the following files in a **`mocks/`** directory at your project root.
 
 1. **`mocks/handlers.js`** — your base API handlers:
 
@@ -125,7 +183,7 @@ Create the following files in a `mocks/` directory at your project root.
 3. **`mocks/index.js`** — initialization with the WebSocket bridge:
 
    ```javascript
-   import { enableMocking as enableMockingFromClient } from 'msw-mcp/client';
+   import { initMocking } from '@msw-mcp/client';
    import { worker } from './browser';
 
    export async function enableMocking() {
@@ -141,7 +199,7 @@ Create the following files in a `mocks/` directory at your project root.
        process.env.ENABLE_MSW_WS_MOCK === '1' ||
        process.env.ENABLE_MSW_WS_MOCK === 'true';
 
-     return enableMockingFromClient({
+     return initMocking({
        worker,
        wsEnabled: isWSEnabled,
        wsBridgeOptions: {
@@ -180,11 +238,7 @@ Create the following files in a `mocks/` directory at your project root.
    !mocks/custom-handlers/index.example.js
    ```
 
-</Steps>
-
-<Aside type="tip" title="Use /msw-setup for automatic scaffolding">
-If you're using `msw-mcp` in an MCP client, run `/msw-setup` to have the AI scaffold all of the above automatically — including framework detection and entry point integration.
-</Aside>
+</details>
 
 ---
 

@@ -26,21 +26,22 @@ In any MCP client with `msw-mcp` configured, type:
 1. **Detect your framework** — React, Vue, Svelte, vanilla JS, Next.js, Nuxt, SvelteKit, and more.
 
 2. **Install dependencies:**
+
    ```bash
-   npm install -D msw@^2.11.0 msw-mcp
+   npm install -D msw@^2.11.0 @msw-mcp/client
    npx msw init public/ --save
    ```
 
 3. **Create the mocks directory:**
    - `mocks/handlers.js` — base handler definitions
    - `mocks/browser.js` — MSW worker setup with `window.msw` exposure
-   - `mocks/index.js` — `enableMocking()` with WebSocket bridge
+   - `mocks/index.js` — `initMocking()` from `@msw-mcp/client` with WebSocket bridge
 
 4. **Configure environment variables** — creates or updates `.env.local` with `ENABLE_MSW_MOCK`, `ENABLE_MSW_WS_MOCK`, and `MCP_SERVER_URL`.
 
-5. **Integrate with the app entry point** — adds the `enableMocking()` call before your app starts.
+5. **Integrate with the app entry point** — adds the `enableMocking()` (or `initMocks()`) call before your app starts.
 
-6. **Handle migrations** — if MSW is already set up, migrates to use `msw-mcp/client` while preserving existing base handlers.
+6. **Handle migrations** — if MSW is already set up, migrates to use `@msw-mcp/client` while preserving existing base handlers.
 
 7. **Add `.gitignore` entries** for `mocks/custom-handlers/`.
 
@@ -50,9 +51,9 @@ In any MCP client with `msw-mcp` configured, type:
 
 ## Optional arguments
 
-| Argument | Description |
-|----------|-------------|
-| `framework` | Specify the framework (auto-detected if omitted) |
+| Argument            | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| `framework`         | Specify the framework (auto-detected if omitted)             |
 | `serviceWorkerPath` | Custom service worker URL (default: `/mockServiceWorker.js`) |
 
 Examples:
@@ -75,6 +76,7 @@ After `/msw-setup` completes, start your dev server, then ask your AI:
 > "Add a mock for GET /api/user that returns `{ id: 1, name: 'Alice' }`."
 
 The AI calls `msw_add_handlers` and the browser updates immediately.
+
 </Aside>
 
 ---

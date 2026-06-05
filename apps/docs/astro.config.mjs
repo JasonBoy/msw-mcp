@@ -27,6 +27,7 @@ export default defineConfig({
           label: 'msw-cli',
           items: [
             { label: 'Overview', slug: 'msw-cli/overview' },
+            { label: 'Agent skill', slug: 'msw-cli/agent-skill' },
             { label: 'Commands', slug: 'msw-cli/commands' },
             { label: 'Session Management', slug: 'msw-cli/sessions' },
           ],
