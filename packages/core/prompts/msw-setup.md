@@ -8,6 +8,7 @@ First, analyze the project:
 
 Read `package.json` and check dependencies:
 
+- **Next.js**: `next` in dependencies, `app/` directory present → App Router; Public dir: `public/`, Config: `next.config.js/ts/mjs`
 - **Vite**: `vite` in devDependencies → Public dir: `public/`, Config: `vite.config.js/ts`
 - **Rspack**: `@rspack/core` or `@rspack/cli` → Public dir: `static/` or `public/`, Config: `rspack.config.js`
 - **Rsbuild**: `@rsbuild/core` → Public dir: `public/`, Config: `rsbuild.config.js/ts`
@@ -16,6 +17,14 @@ Read `package.json` and check dependencies:
 ### 1a. Detect publicPath from Bundler Config
 
 Read the bundler config file to find the publicPath for dev server:
+
+**For Next.js (`next.config.js/ts/mjs`):**
+
+- Look for `basePath` option in config
+- Examples:
+  - `basePath: '/app'` → Service worker URL: `/app/mockServiceWorker.js`
+  - `basePath: '/app/'` → Service worker URL: `/app/mockServiceWorker.js` (strip trailing slash)
+  - No `basePath` or `basePath: ''` → Service worker URL: `/mockServiceWorker.js`
 
 **For Vite (`vite.config.js/ts`):**
 
@@ -124,6 +133,7 @@ Check if project uses TypeScript:
 - Run using Bash tool: `npx msw init <detected-public-dir>/ --save`
   - Use detected public directory from step 1
   - Example: `npx msw init static/ --save` for Rspack with static/ directory
+  - Example: `npx msw init public/ --save` for Next.js (always uses `public/`)
 - Wait for command to complete
 
 **If user declines:**
@@ -259,7 +269,10 @@ export async function initMocks() {
     worker,
     wsEnabled: isWSEnabled,
     wsBridgeOptions: {
-      url: process.env.MCP_SERVER_URL || 'ws://localhost:6789',
+      url:
+        process.env.MSW_WS_URL ||
+        process.env.MCP_SERVER_URL ||
+        'ws://localhost:6789',
     },
     workerOptions: {
       onUnhandledRequest: 'bypass',
@@ -293,7 +306,10 @@ export async function initMocks(): Promise<void> {
     worker,
     wsEnabled: isWSEnabled,
     wsBridgeOptions: {
-      url: process.env.MCP_SERVER_URL || 'ws://localhost:6789',
+      url:
+        process.env.MSW_WS_URL ||
+        process.env.MCP_SERVER_URL ||
+        'ws://localhost:6789',
     },
     workerOptions: {
       onUnhandledRequest: 'bypass',
@@ -307,6 +323,42 @@ export async function initMocks(): Promise<void> {
 ```
 
 **IMPORTANT**: Replace `<DETECTED_PUBLIC_PATH>/mockServiceWorker.js` with the actual path (same as JavaScript version)
+
+**For Next.js Projects (mocks/index.ts) — uses `NEXT_PUBLIC_*` env vars:**
+
+```typescript
+import { initMocking } from '@msw-mcp/client';
+import { worker } from './browser';
+
+export async function initMocks(): Promise<void> {
+  const isWSEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_MSW_WS_MOCK === '1' ||
+    process.env.NEXT_PUBLIC_ENABLE_MSW_WS_MOCK === 'true';
+
+  await initMocking({
+    worker,
+    wsEnabled: isWSEnabled,
+    wsBridgeOptions: {
+      url:
+        process.env.NEXT_PUBLIC_MSW_WS_URL ||
+        process.env.NEXT_PUBLIC_MCP_SERVER_URL ||
+        'ws://localhost:6789',
+    },
+    workerOptions: {
+      onUnhandledRequest: 'bypass',
+      quiet: false,
+      serviceWorker: {
+        url: '<DETECTED_PUBLIC_PATH>/mockServiceWorker.js', // Use detected basePath + /mockServiceWorker.js
+      },
+    },
+  });
+}
+```
+
+**IMPORTANT for Next.js**: Replace `<DETECTED_PUBLIC_PATH>/mockServiceWorker.js` using the `basePath` from `next.config.*`:
+
+- `basePath: '/app'` → `/app/mockServiceWorker.js`
+- No `basePath` or `basePath: ''` → `/mockServiceWorker.js`
 
 **For JavaScript Projects (mocks/custom-handlers/index.example.js):**
 
@@ -398,12 +450,32 @@ mocks/custom-handlers/index.ts
 
 **Step 5a: Create/Update .env files**
 
+For Next.js projects, prefix all env vars with `NEXT_PUBLIC_` so Next.js automatically exposes them to the browser (no bundler config edit required):
+
+**.env.example** (Next.js):
+
+```bash
+NEXT_PUBLIC_ENABLE_MSW_MOCK=true
+NEXT_PUBLIC_ENABLE_MSW_WS_MOCK=true
+NEXT_PUBLIC_MSW_WS_URL=ws://localhost:6789
+```
+
+**.env.local** (Next.js, create if doesn't exist):
+
+```bash
+NEXT_PUBLIC_ENABLE_MSW_MOCK=true
+NEXT_PUBLIC_ENABLE_MSW_WS_MOCK=true
+NEXT_PUBLIC_MSW_WS_URL=ws://localhost:6789
+```
+
+For all other frameworks, use the standard names:
+
 **.env.example**:
 
 ```bash
 ENABLE_MSW_MOCK=true
 ENABLE_MSW_WS_MOCK=true
-MCP_SERVER_URL=ws://localhost:6789
+MSW_WS_URL=ws://localhost:6789
 ```
 
 **.env.local** (create if doesn't exist):
@@ -411,12 +483,14 @@ MCP_SERVER_URL=ws://localhost:6789
 ```bash
 ENABLE_MSW_MOCK=true
 ENABLE_MSW_WS_MOCK=true
-MCP_SERVER_URL=ws://localhost:6789
+MSW_WS_URL=ws://localhost:6789
 ```
 
 **Step 5b: Configure Bundler to Expose Environment Variables**
 
-Environment variables need to be explicitly exposed to frontend code. Configuration depends on detected build tool:
+**For Next.js:** No bundler configuration is required. Variables prefixed with `NEXT_PUBLIC_` are automatically inlined by Next.js. Skip to Step 6.
+
+For all other frameworks, environment variables need to be explicitly exposed to frontend code. Configuration depends on detected build tool:
 
 **For Vite (`vite.config.js/ts`):**
 
@@ -425,9 +499,9 @@ Option 1 - Use VITE\_ prefix (recommended):
 - Rename variables in .env files:
   - `VITE_ENABLE_MSW_MOCK=true`
   - `VITE_ENABLE_MSW_WS_MOCK=true`
-  - `VITE_MCP_SERVER_URL=ws://localhost:6789`
+  - `VITE_MSW_WS_URL=ws://localhost:6789`
 - Access in code: `import.meta.env.VITE_ENABLE_MSW_MOCK`
-- Update mocks/index.js to use `import.meta.env.VITE_*` instead of `process.env.*`
+- Update mocks/index.js to use `import.meta.env.VITE_MSW_WS_URL ?? import.meta.env.VITE_MCP_SERVER_URL` for backward compatibility
 
 Option 2 - Use define in config:
 
@@ -440,7 +514,7 @@ export default defineConfig({
     'process.env.ENABLE_MSW_WS_MOCK': JSON.stringify(
       process.env.ENABLE_MSW_WS_MOCK,
     ),
-    'process.env.MCP_SERVER_URL': JSON.stringify(process.env.MCP_SERVER_URL),
+    'process.env.MSW_WS_URL': JSON.stringify(process.env.MSW_WS_URL),
   },
 });
 ```
@@ -461,7 +535,7 @@ module.exports = {
       'process.env.ENABLE_MSW_WS_MOCK': JSON.stringify(
         process.env.ENABLE_MSW_WS_MOCK,
       ),
-      'process.env.MCP_SERVER_URL': JSON.stringify(process.env.MCP_SERVER_URL),
+      'process.env.MSW_WS_URL': JSON.stringify(process.env.MSW_WS_URL),
     }),
   ],
 };
@@ -483,7 +557,7 @@ export default defineConfig({
       'process.env.ENABLE_MSW_WS_MOCK': JSON.stringify(
         process.env.ENABLE_MSW_WS_MOCK,
       ),
-      'process.env.MCP_SERVER_URL': JSON.stringify(process.env.MCP_SERVER_URL),
+      'process.env.MSW_WS_URL': JSON.stringify(process.env.MSW_WS_URL),
     },
   },
 });
@@ -502,11 +576,69 @@ export default defineConfig({
 
 Auto-detect entry file based on framework:
 
-- React: `src/main.jsx` or `src/index.jsx`
+- React (Vite/Rspack): `src/main.jsx` or `src/index.jsx`
 - Vue: `src/main.js`
 - Svelte: `src/main.js`
+- **Next.js (App Router)**: No single entry file — use a `'use client'` provider component (see below)
 
-Update the entry file with dev mode check OUTSIDE the initMocks call:
+**For Next.js (App Router):**
+
+Create `mocks/MswProvider.tsx` (or `mocks/MswProvider.jsx` for JavaScript projects):
+
+```tsx
+'use client';
+import { useEffect, useState } from 'react';
+
+export function MswProvider({ children }: { children: React.ReactNode }) {
+  const mockingEnabled =
+    process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_ENABLE_MSW_MOCK === 'true';
+  const [ready, setReady] = useState(!mockingEnabled);
+
+  useEffect(() => {
+    if (ready) return;
+    (async () => {
+      const { initMocks } = await import('./index');
+      await initMocks();
+      setReady(true);
+    })();
+  }, [ready]);
+
+  if (!ready) return null;
+  return <>{children}</>;
+}
+```
+
+Then wrap `children` in `app/layout.tsx` with `<MswProvider>`:
+
+```tsx
+import { MswProvider } from '../mocks/MswProvider';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <MswProvider>{children}</MswProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+**How the provider works:**
+
+- When `NEXT_PUBLIC_ENABLE_MSW_MOCK !== 'true'` or in production, `ready` starts as `true` and children render immediately (zero overhead).
+- In development with mocking enabled, children are held until the service worker is started — this prevents un-mocked API calls on first paint.
+- The `useEffect` dynamic import ensures MSW code is never included in the production bundle.
+- `process.env.NEXT_PUBLIC_ENABLE_MSW_MOCK` is statically inlined by Next.js at build time, so the dead-code path is eliminated in production builds.
+
+**Note on Next 15.3+:** An alternative is to use `instrumentation-client.ts` to start the worker before the page renders. The provider approach above works for all Next.js App Router versions and is recommended for simplicity.
+
+Update the "Files created" completion message (Step 7) to include `mocks/MswProvider.tsx` for Next.js projects.
 
 **For Vite Projects (using import.meta.env):**
 
@@ -563,6 +695,7 @@ Files created:
 - mocks/browser.{js/ts} - Worker setup
 - mocks/types.d.ts - TypeScript declarations (TS projects only)
 - mocks/index.{js/ts} - Initialization
+- mocks/MswProvider.tsx - Client provider for Next.js App Router (Next.js only)
 - mocks/custom-handlers/index.example.{js/ts} - Example handlers
 - mocks/custom-handlers/index.{js/ts} - Your local handlers (gitignored, ready to use)
 
@@ -627,7 +760,10 @@ export async function initMocks() {
     worker,
     wsEnabled: isWSEnabled,
     wsBridgeOptions: {
-      url: process.env.MCP_SERVER_URL || 'ws://localhost:6789',
+      url:
+        process.env.MSW_WS_URL ||
+        process.env.MCP_SERVER_URL ||
+        'ws://localhost:6789',
     },
     workerOptions: {
       onUnhandledRequest: 'bypass',
@@ -655,7 +791,10 @@ export async function initMocks(): Promise<void> {
     worker,
     wsEnabled: isWSEnabled,
     wsBridgeOptions: {
-      url: process.env.MCP_SERVER_URL || 'ws://localhost:6789',
+      url:
+        process.env.MSW_WS_URL ||
+        process.env.MCP_SERVER_URL ||
+        'ws://localhost:6789',
     },
     workerOptions: {
       onUnhandledRequest: 'bypass',
@@ -668,8 +807,45 @@ export async function initMocks(): Promise<void> {
 }
 ```
 
+**For Next.js Projects (mocks/index.ts migration) — uses `NEXT_PUBLIC_*` env vars:**
+
+```typescript
+import { initMocking } from '@msw-mcp/client';
+import { worker } from './browser';
+
+export async function initMocks(): Promise<void> {
+  const isWSEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_MSW_WS_MOCK === '1' ||
+    process.env.NEXT_PUBLIC_ENABLE_MSW_WS_MOCK === 'true';
+
+  await initMocking({
+    worker,
+    wsEnabled: isWSEnabled,
+    wsBridgeOptions: {
+      url:
+        process.env.NEXT_PUBLIC_MSW_WS_URL ||
+        process.env.NEXT_PUBLIC_MCP_SERVER_URL ||
+        'ws://localhost:6789',
+    },
+    workerOptions: {
+      onUnhandledRequest: 'bypass',
+      quiet: false,
+      serviceWorker: {
+        url: '<DETECTED_PUBLIC_PATH>/mockServiceWorker.js', // Use detected basePath
+      },
+    },
+  });
+}
+```
+
 **C. Update App Entry Point**:
 Move the dev mode check to the entry point with dynamic import:
+
+**For Next.js (App Router):**
+
+Create `mocks/MswProvider.tsx` and wrap `app/layout.tsx` with it (same as in new project mode — see Step 6 of NEW PROJECT MODE). Use `NEXT_PUBLIC_*` env vars for the enablement check.
+
+Update `.env.local` and `.env.example` to use `NEXT_PUBLIC_ENABLE_MSW_MOCK`, `NEXT_PUBLIC_ENABLE_MSW_WS_MOCK`, and `NEXT_PUBLIC_MSW_WS_URL` in place of the old names (if they were not already using the `NEXT_PUBLIC_` prefix).
 
 **For Vite Projects:**
 
@@ -705,7 +881,7 @@ startApp();
 
 - Read existing serviceWorker.url to see if there's already a custom path
 - If custom path exists, preserve it
-- Otherwise, use detected publicPath from step 1a
+- Otherwise, use detected publicPath (or basePath for Next.js) from step 1a
 
 **C. Keep handlers.js unchanged** - Do NOT modify
 
@@ -713,7 +889,8 @@ startApp();
 
 **E. Update .env files** (if not already correct):
 
-- Ensure ENABLE_MSW_MOCK, ENABLE_MSW_WS_MOCK, MCP_SERVER_URL are set
+- Next.js: Ensure `NEXT_PUBLIC_ENABLE_MSW_MOCK`, `NEXT_PUBLIC_ENABLE_MSW_WS_MOCK`, `NEXT_PUBLIC_MSW_WS_URL` are set
+- Other frameworks: Ensure `ENABLE_MSW_MOCK`, `ENABLE_MSW_WS_MOCK`, `MSW_WS_URL` are set
 
 ### 4. Verify Migration
 
@@ -726,12 +903,13 @@ Tell user: "Migration complete! Your existing handlers are preserved. Test by ru
 ### Core Behavior
 
 - **Detect first** - Always read package.json first to detect build tool and TypeScript
-- **Detect publicPath** - Read bundler config file to find publicPath for service worker URL
+- **Detect publicPath** - Read bundler config file to find publicPath for service worker URL; for Next.js read `basePath` from `next.config.*`
 - **Use correct extensions** - Generate .ts files for TypeScript projects, .js for JavaScript
 - **Be concise** - Execute tasks directly without excessive explanation
-- **Auto-detect framework** - Check package.json for react/vue/svelte/etc
+- **Auto-detect framework** - Check package.json for next/react/vue/svelte/etc
 - **Preserve user code** - In migration mode, NEVER modify handlers.js/ts or custom-handlers/
-- **Configure bundler for env vars** - MUST update bundler config to expose environment variables to frontend code (Step 5b is mandatory)
+- **Configure bundler for env vars** - MUST update bundler config to expose environment variables to frontend code (Step 5b is mandatory for non-Next.js projects)
+- **Next.js: no bundler config needed** - Use `NEXT_PUBLIC_` prefix; Next.js auto-exposes these to the browser
 
 ### Tool Usage
 
@@ -740,12 +918,15 @@ Tell user: "Migration complete! Your existing handlers are preserved. Test by ru
 - **Adapt paths** - Adjust service worker path and public directory based on detected build tool
 - **TypeScript imports** - Use proper type imports in .ts files (e.g., `type RequestHandler`)
 - **Edit bundler config** - ALWAYS use Edit tool (not Write) to update bundler config files to preserve existing configuration
+- **Next.js App Router entry point** - Create `mocks/MswProvider.tsx` and update `app/layout.tsx` instead of editing a single entry file
 
 ### Environment Variable Configuration (Critical!)
 
-- **MUST configure bundler** - Adding to .env files alone is NOT enough
+- **MUST configure bundler** - Adding to .env files alone is NOT enough (applies to Vite, Rspack, Rsbuild, Webpack)
+- **Next.js exception** - For Next.js, `NEXT_PUBLIC_` prefix is sufficient; no bundler config change required
 - **Read config first** - Always read the existing bundler config file before modifying
 - **Merge, don't replace** - If DefinePlugin/define already exists, merge new env vars with existing ones
+- **For Next.js** - Use `NEXT_PUBLIC_ENABLE_MSW_MOCK`, `NEXT_PUBLIC_ENABLE_MSW_WS_MOCK`, `NEXT_PUBLIC_MSW_WS_URL`; read via `process.env.NEXT_PUBLIC_*` (statically inlined by Next.js)
 - **For Vite** - Prefer VITE\_ prefix method, update mocks/index.js to use `import.meta.env`
 - **For Rspack** - Add to DefinePlugin in plugins array
 - **For Rsbuild** - Add to source.define object
@@ -771,18 +952,22 @@ Tell user: "Migration complete! Your existing handlers are preserved. Test by ru
 
 ## Detection Steps Summary
 
-1. Read package.json → Detect build tool and TypeScript
-2. Read bundler config file → Extract publicPath
+1. Read package.json → Detect build tool (`next`, `vite`, `@rspack/core`, etc.) and TypeScript
+2. Read bundler/framework config file → Extract publicPath (or `basePath` for Next.js)
 3. Check for tsconfig.json (if not already done) → Confirm TypeScript
-4. Check for mocks/ directory → Determine setup mode (NEW vs MIGRATION)
-5. Install dependencies (if missing, with user permission)
-6. Create/update .env files
-7. **CRITICAL**: Update bundler config to expose environment variables
-8. Construct service worker URL with detected publicPath
-9. Generate mocks/ files with correct extensions and paths
-10. Integrate into app entry point
+4. Check for `app/` directory → Confirm Next.js App Router (if `next` detected)
+5. Check for mocks/ directory → Determine setup mode (NEW vs MIGRATION)
+6. Install dependencies (if missing, with user permission)
+7. Create/update .env files
+   - Next.js: use `NEXT_PUBLIC_` prefix — no bundler config edit needed
+   - Other: use plain names + update bundler config (Step 8)
+8. **CRITICAL (non-Next.js only)**: Update bundler config to expose environment variables
+9. Construct service worker URL with detected publicPath / basePath
+10. Generate mocks/ files with correct extensions and paths
+    - Next.js: also generate `mocks/MswProvider.tsx` and update `app/layout.tsx`
+    - Others: update app entry file (`src/main.jsx`, etc.)
 
-**Remember:** Steps 6-7 (env files + bundler config) must both be completed for environment variables to work!
+**Remember:** For non-Next.js projects, Steps 7-8 (env files + bundler config) must both be completed for environment variables to work! For Next.js, only Step 7 is needed.
 
 Begin setup now by reading package.json to detect build tool and TypeScript support.
 
@@ -791,7 +976,10 @@ Begin setup now by reading package.json to detect build tool and TypeScript supp
 ## Connect msw-cli (after project files are ready)
 
 1. Run `msw-cli open` (or `msw-cli open --port 6789` if the app uses a fixed port).
-2. Copy the **WebSocket** URL from the command output into `MCP_SERVER_URL` / `VITE_MCP_SERVER_URL` (and bundler `define` if needed).
+2. Copy the **WebSocket** URL from the command output into the appropriate env var:
+   - Next.js: `NEXT_PUBLIC_MSW_WS_URL`
+   - Vite: `VITE_MSW_WS_URL` (and bundler `define` if needed)
+   - Rspack/Rsbuild/Webpack: `MSW_WS_URL` (and bundler `define`)
 3. Run `msw-cli status` — `connected` must be `true` after reloading the dev server.
 4. Use `msw-cli add` to add dynamic handlers at runtime.
 

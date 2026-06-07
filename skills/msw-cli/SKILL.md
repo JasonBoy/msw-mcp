@@ -15,7 +15,7 @@ Project not set up yet? Use the **msw-setup** skill or run **`msw-cli setup`** f
 
 ```bash
 msw-cli open                    # prints WebSocket URL + port
-# If port ≠ app config, update MCP_SERVER_URL / bridge to match output
+# If port ≠ app config, update MSW_WS_URL (or VITE_MSW_WS_URL / NEXT_PUBLIC_MSW_WS_URL) to match output
 msw-cli add "http.get('/api/users', () => HttpResponse.json([{ id: 1 }]))"
 msw-cli status                  # connected must be true for mocks to apply
 msw-cli close
@@ -26,7 +26,7 @@ Use `msw-cli open --port 6789` when the app already hard-codes that port. Handle
 ## Workflow
 
 1. `open` — start daemon; read **Port** and **WebSocket** from markdown output.
-2. Sync app — if port auto-changed (6789 busy), set `ws://127.0.0.1:<port>` in the MSW bridge / env.
+2. Sync app — if port auto-changed (6789 busy), set `ws://127.0.0.1:<port>` in `MSW_WS_URL` / `VITE_MSW_WS_URL` / `NEXT_PUBLIC_MSW_WS_URL` env.
 3. `add` / `update` / `remove` / `reset` — handler changes.
 4. `status` — confirm browser connected.
 5. `close` when finished.

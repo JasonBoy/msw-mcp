@@ -1,6 +1,6 @@
 {
   "name": "msw-cli",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "A CLI for AI agents to dynamically update Mock Service Worker (MSW) handlers.",
   "type": "module",
   "bin": {

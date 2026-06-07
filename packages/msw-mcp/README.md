@@ -157,7 +157,7 @@ Create `.env.local`:
 ```bash
 ENABLE_MSW_MOCK=true
 ENABLE_MSW_WS_MOCK=true
-MCP_SERVER_URL=ws://localhost:6789
+MSW_WS_URL=ws://localhost:6789
 ```
 
 ## Usage Examples

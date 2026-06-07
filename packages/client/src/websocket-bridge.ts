@@ -59,7 +59,9 @@ export class MSWWebSocketBridge {
     }
 
     this.isConnecting = true;
-    console.log(`[MSW Bridge] Connecting to MCP server at ${this.url}`);
+    console.log(
+      `[MSW Bridge] Connecting to MSW WebSocket server at ${this.url}`,
+    );
 
     try {
       this.ws = new WebSocket(this.url);
@@ -84,7 +86,7 @@ export class MSWWebSocketBridge {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log('[MSW Bridge] Connected to MCP server');
+      console.log('[MSW Bridge] Connected to MSW WebSocket server');
       this.isConnecting = false;
       // Don't reset reconnectAttempts here - only reset after stable connection confirmed
     };

@@ -22,5 +22,5 @@ Do not duplicate the full setup guide in chat — execute from `msw-cli setup` o
 ## Notes
 
 - Ask permission before `npm install` / `npx msw init` (as the guide describes).
-- `MCP_SERVER_URL` (or `VITE_*` equivalents) must match the port from `msw-cli open`.
+- The WebSocket URL env var name depends on the framework: `NEXT_PUBLIC_MSW_WS_URL` (Next.js), `VITE_MSW_WS_URL` (Vite), or `MSW_WS_URL` (Rspack/Rsbuild/Webpack) — must match the port from `msw-cli open`. (`MCP_SERVER_URL` is accepted as a legacy fallback.)
 - MCP users can still use `/msw-setup` in an MCP client; the same guide backs both paths.
