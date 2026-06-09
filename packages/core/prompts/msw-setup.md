@@ -579,37 +579,88 @@ Auto-detect entry file based on framework:
 - React (Vite/Rspack): `src/main.jsx` or `src/index.jsx`
 - Vue: `src/main.js`
 - Svelte: `src/main.js`
-- **Next.js (App Router)**: No single entry file — use a `'use client'` provider component (see below)
+- **Next.js (App Router)**: No single entry file — use a `'use client'` gate component (see below). `app/layout.tsx` is a **Server Component**; MSW bootstrap must live in a **client** file marked `'use client'`.
 
-**For Next.js (App Router):**
+#### Render-before-mock race (all frameworks)
 
-Create `mocks/MswProvider.tsx` (or `mocks/MswProvider.jsx` for JavaScript projects):
+**Core lesson:** Handlers only apply after the worker is **ready**. If any code that should be mocked runs **before** `worker.start()` / `initMocks()` finishes, **initial** requests can hit the real network. That race is easy to miss because `msw-cli status` only checks the control-plane connection, not whether the **first** browser requests were intercepted.
+
+Typical causes:
+
+- Rendering the full app tree while MSW starts in a **parallel** `useEffect` (see anti-pattern below).
+- Fetches from code **outside** the gate (import-time singletons, providers above `MswProvider`, parallel roots).
+- **React Strict Mode (development)** mounting twice: **`initMocks()` must be deduped** with a module-scope promise so the worker is not started twice.
+
+**Anti-pattern (do not scaffold this):** Children mount immediately; MSW starts in a sibling effect. Child `useEffect`/queries can fire before the worker is active.
 
 ```tsx
+// ❌ Wrong: app runs in parallel with worker startup
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
-export function MswProvider({ children }: { children: React.ReactNode }) {
-  const mockingEnabled =
-    process.env.NODE_ENV === 'development' &&
-    process.env.NEXT_PUBLIC_ENABLE_MSW_MOCK === 'true';
-  const [ready, setReady] = useState(!mockingEnabled);
-
+export function BadMswShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    if (ready) return;
-    (async () => {
-      const { initMocks } = await import('./index');
-      await initMocks();
-      setReady(true);
-    })();
-  }, [ready]);
-
-  if (!ready) return null;
+    void import('./index').then((m) => m.initMocks());
+  }, []);
   return <>{children}</>;
 }
 ```
 
-Then wrap `children` in `app/layout.tsx` with `<MswProvider>`:
+**Correct pattern:** Do not mount the subtree that performs mocked fetches until `initMocks()` has resolved. Return `null` or a small dev-only loader until then. For Vite/Webpack/Rspack, the `startApp()` snippets below already **`await initMocks()` before** mounting the app — same gate principle.
+
+**For Next.js (App Router):**
+
+Create `mocks/MswProvider.tsx` (or `mocks/MswProvider.jsx` for JavaScript — same logic, omit TypeScript types):
+
+```tsx
+'use client';
+
+import { useEffect, useState, type ReactNode } from 'react';
+
+const mockingEnabled =
+  process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_ENABLE_MSW_MOCK === 'true';
+
+/** Single flight for Strict Mode double-mount in dev */
+let mswInitPromise: Promise<void> | null = null;
+
+function ensureMocksReady(): Promise<void> {
+  if (!mockingEnabled) {
+    return Promise.resolve();
+  }
+  if (!mswInitPromise) {
+    mswInitPromise = import('./index').then((m) => m.initMocks());
+  }
+  return mswInitPromise;
+}
+
+export function MswProvider({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(!mockingEnabled);
+
+  useEffect(() => {
+    if (!mockingEnabled) {
+      return;
+    }
+    let cancelled = false;
+    void ensureMocksReady().then(() => {
+      if (!cancelled) {
+        setReady(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!ready) {
+    // Dev tradeoff: blank first paint vs guaranteed mocking. Optional: return <p>Loading mocks…</p>
+    return null;
+  }
+  return <>{children}</>;
+}
+```
+
+**Layout option A (simple):** `app/layout.tsx` stays a Server Component; import the client gate directly:
 
 ```tsx
 import { MswProvider } from '../mocks/MswProvider';
@@ -629,16 +680,44 @@ export default function RootLayout({
 }
 ```
 
+**Layout option B (stricter production client bundle):** Keep mock bootstrap off the production path by combining a **static** `process.env.NODE_ENV === 'development'` check in the **server** `layout.tsx` with `next/dynamic` and `ssr: false` so the `MswProvider` chunk is not loaded in production when the branch is omitted at build time:
+
+```tsx
+import dynamic from 'next/dynamic';
+
+const MswProvider = dynamic(
+  () => import('../mocks/MswProvider').then((mod) => mod.MswProvider),
+  { ssr: false },
+);
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        {process.env.NODE_ENV === 'development' ? (
+          <MswProvider>{children}</MswProvider>
+        ) : (
+          children
+        )}
+      </body>
+    </html>
+  );
+}
+```
+
 **How the provider works:**
 
-- When `NEXT_PUBLIC_ENABLE_MSW_MOCK !== 'true'` or in production, `ready` starts as `true` and children render immediately (zero overhead).
-- In development with mocking enabled, children are held until the service worker is started — this prevents un-mocked API calls on first paint.
-- The `useEffect` dynamic import ensures MSW code is never included in the production bundle.
-- `process.env.NEXT_PUBLIC_ENABLE_MSW_MOCK` is statically inlined by Next.js at build time, so the dead-code path is eliminated in production builds.
+- When `NEXT_PUBLIC_ENABLE_MSW_MOCK !== 'true'` or in production, `ready` starts as `true` and children render immediately (no wait, no extra latency).
+- In development with mocking enabled, **children do not mount** until `initMocks()` completes — so initial client requests from that subtree do not race ahead of the service worker.
+- Expect a **brief blank frame or loader** in dev when mocks are on; that is the intended cost of guaranteeing no escaped first requests. Use `null` vs a tiny spinner based on UX preference.
+- Dynamic `import('./index')` means mock code is not **executed** when mocking is disabled; with **layout option A**, a small client chunk for `MswProvider` may still exist in production but stays inert. **Layout option B** avoids loading that chunk in production when the dev branch is statically removed.
+- `process.env.NODE_ENV` and `NEXT_PUBLIC_*` are inlined at build time; production builds do not run the dev-only path.
 
-**Note on Next 15.3+:** An alternative is to use `instrumentation-client.ts` to start the worker before the page renders. The provider approach above works for all Next.js App Router versions and is recommended for simplicity.
-
-Update the "Files created" completion message (Step 7) to include `mocks/MswProvider.tsx` for Next.js projects.
+**Note on Next 15.3+:** An alternative is to use `instrumentation-client.ts` to start the worker before the page renders. The gated provider approach works for all Next.js App Router versions and is recommended for simplicity.
 
 **For Vite Projects (using import.meta.env):**
 
@@ -678,10 +757,9 @@ startApp();
 
 **Benefits of this approach:**
 
-- In production builds, the entire mocks module is tree-shaken (never imported)
+- In production builds, the mocks module is never imported or executed when the dev gate is false
 - No unnecessary function call overhead in production
-- Dynamic import ensures mocks code is not bundled in production
-- The check happens before any MSW-related code is loaded
+- The `initMocks()` call runs **before** the app mounts, so there is no render-before-mock race (same gate principle as the Next.js `MswProvider`)
 
 ### 7. Provide Setup Complete Message
 
@@ -701,8 +779,9 @@ Files created:
 
 Next steps:
 1. Run your dev server to activate MSW
-2. Edit mocks/custom-handlers/index.{js/ts} to add your custom handlers
-3. I can help you add test handlers once the server is running!
+2. Hard reload the app, open DevTools → Network, and confirm **the first** API requests are intercepted (status/response match your handlers). `msw-cli status` showing `connected: true` does not prove the first paint avoided the race.
+3. Edit mocks/custom-handlers/index.{js/ts} to add your custom handlers
+4. I can help you add test handlers once the server is running!
 ```
 
 ---
@@ -843,7 +922,10 @@ Move the dev mode check to the entry point with dynamic import:
 
 **For Next.js (App Router):**
 
-Create `mocks/MswProvider.tsx` and wrap `app/layout.tsx` with it (same as in new project mode — see Step 6 of NEW PROJECT MODE). Use `NEXT_PUBLIC_*` env vars for the enablement check.
+Align with **Step 6 of NEW PROJECT MODE** (same file):
+
+- **`mocks/MswProvider.tsx`**: gated client provider with **module-scope `mswInitPromise`** (Strict Mode safe); do not use the parallel `useEffect` anti-pattern.
+- **`app/layout.tsx`**: Server Component — either import `MswProvider` directly (**layout option A**) or use `next/dynamic` + `NODE_ENV === 'development'` (**layout option B**). See **Render-before-mock race** and **Connect msw-cli** verification in NEW PROJECT MODE.
 
 Update `.env.local` and `.env.example` to use `NEXT_PUBLIC_ENABLE_MSW_MOCK`, `NEXT_PUBLIC_ENABLE_MSW_WS_MOCK`, and `NEXT_PUBLIC_MSW_WS_URL` in place of the old names (if they were not already using the `NEXT_PUBLIC_` prefix).
 
@@ -894,7 +976,7 @@ startApp();
 
 ### 4. Verify Migration
 
-Tell user: "Migration complete! Your existing handlers are preserved. Test by running your dev server."
+Tell user: "Migration complete! Your existing handlers are preserved. Run the dev server, then **hard reload** and confirm in the **Network** tab that **the first** API calls are intercepted — not only `msw-cli status` / `connected: true`."
 
 ---
 
@@ -918,7 +1000,7 @@ Tell user: "Migration complete! Your existing handlers are preserved. Test by ru
 - **Adapt paths** - Adjust service worker path and public directory based on detected build tool
 - **TypeScript imports** - Use proper type imports in .ts files (e.g., `type RequestHandler`)
 - **Edit bundler config** - ALWAYS use Edit tool (not Write) to update bundler config files to preserve existing configuration
-- **Next.js App Router entry point** - Create `mocks/MswProvider.tsx` and update `app/layout.tsx` instead of editing a single entry file
+- **Next.js App Router entry point** - Create gated `mocks/MswProvider.tsx` (module-scope promise for `initMocks`, Strict Mode safe), update `app/layout.tsx` (Server Component) with client wrapper per Step 6; never scaffold the parallel-effect anti-pattern. After setup, verify **first** Network requests, not only `msw-cli status`
 
 ### Environment Variable Configuration (Critical!)
 
@@ -980,7 +1062,8 @@ Begin setup now by reading package.json to detect build tool and TypeScript supp
    - Next.js: `NEXT_PUBLIC_MSW_WS_URL`
    - Vite: `VITE_MSW_WS_URL` (and bundler `define` if needed)
    - Rspack/Rsbuild/Webpack: `MSW_WS_URL` (and bundler `define`)
-3. Run `msw-cli status` — `connected` must be `true` after reloading the dev server.
-4. Use `msw-cli add` to add dynamic handlers at runtime.
+3. Run `msw-cli status` — `connected` must be `true` after reloading the dev server. This only confirms the **WebSocket bridge** to `msw-cli`; it does **not** prove that browser requests on the **first** paint were intercepted.
+4. **Verify mocking:** Hard reload, then in DevTools → Network (or Application → Service Workers), confirm **initial** requests hit MSW as expected. This catches render-before-mock races that `msw-cli status` misses.
+5. Use `msw-cli add` to add dynamic handlers at runtime.
 
 Default service worker path hint: {{serviceWorkerPath}}
