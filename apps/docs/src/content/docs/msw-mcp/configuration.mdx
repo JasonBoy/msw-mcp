@@ -11,7 +11,8 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 |------|---------|-------------|
 | `--mock-ws-port <port>` | `6789` | WebSocket server port |
 | `--single-client` | off | Only send messages to the most recently connected tab |
-| `--persist-handlers` | off | Persist all handlers to browser localStorage |
+| `--persist-handlers` | **on** | Persist all handlers to browser localStorage |
+| `--no-persist-handlers` | — | Disable handler persistence |
 | `--persist-handlers=<N>` | — | Persist only the N most recent handlers (FIFO) |
 
 ### Usage examples
@@ -26,8 +27,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
       "command": "npx",
       "args": [
         "msw-mcp@latest",
-        "--mock-ws-port=6789",
-        "--persist-handlers=10"
+        "--mock-ws-port=6789"
       ]
     }
   }
@@ -38,7 +38,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
   <TabItem label="Claude Code">
 
 ```bash
-claude mcp add msw-mcp npx msw-mcp@latest -- --mock-ws-port=6789 --persist-handlers
+claude mcp add msw-mcp npx msw-mcp@latest -- --mock-ws-port=6789
 ```
 
   </TabItem>
@@ -75,11 +75,11 @@ By default, `msw-mcp` broadcasts to **all** connected browser tabs. Enable `--si
 
 ## `--persist-handlers`
 
-When enabled, dynamically added handlers are saved to the browser's `localStorage` under the key `msw_dynamic_handlers` and automatically restored on page refresh.
+Handler persistence is **enabled by default**. Dynamically added handlers are saved to the browser's `localStorage` under the key `msw_dynamic_handlers` and automatically restored on page refresh.
 
 ```bash
-# Persist all handlers
-npx msw-mcp@latest --persist-handlers
+# Disable persistence
+npx msw-mcp@latest --no-persist-handlers
 
 # Persist only the 10 most recent handlers (FIFO)
 npx msw-mcp@latest --persist-handlers=10

@@ -41,16 +41,16 @@ Sessions: default name = current directory basename. State: `~/.msw-cli/sessions
 
 ## Commands
 
-| Command                             | Purpose                                   |
-| ----------------------------------- | ----------------------------------------- |
-| `open [--port N] [-s name]`         | Start/reuse daemon (required first)       |
-| `add "<handler>"`                   | Add handler(s)                            |
-| `update "<pattern>" -h "<handler>"` | Replace handlers matching pattern         |
-| `remove "<pattern>"`                | Remove handlers                           |
-| `reset [handlers...]`               | Clear runtime handlers (optional new set) |
-| `status`                            | Connection + active handlers              |
-| `list`                              | All open sessions                         |
-| `close [name]` / `close-all`        | Stop daemon(s)                            |
+| Command                                                                                      | Purpose                                   |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `open [--port N] [-s name] [--no-persist-handlers] [--persist-handlers N] [--single-client]` | Start/reuse daemon (required first)       |
+| `add "<handler>"`                                                                            | Add handler(s)                            |
+| `update "<pattern>" -h "<handler>"`                                                          | Replace handlers matching pattern         |
+| `remove "<pattern>"`                                                                         | Remove handlers                           |
+| `reset [handlers...]`                                                                        | Clear runtime handlers (optional new set) |
+| `status`                                                                                     | Connection + active handlers              |
+| `list`                                                                                       | All open sessions                         |
+| `close [name]` / `close-all`                                                                 | Stop daemon(s)                            |
 
 ## Troubleshooting
 

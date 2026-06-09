@@ -57,12 +57,18 @@ Start (or reuse) an MSW daemon session. Required before `add`, `update`, `remove
 $ msw-cli open
 $ msw-cli open --port 6789
 $ msw-cli open -s my-app --port 6789
+$ msw-cli open --no-persist-handlers
+$ msw-cli open --persist-handlers 10
+$ msw-cli open --single-client
 ```
 
-| Flag            | Description                                            |
-| --------------- | ------------------------------------------------------ |
-| `-s, --session` | Session name (default: current directory name)         |
-| `--port`        | Bind to this port; fails if in use (no auto-increment) |
+| Flag                     | Description                                                                                              |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `-s, --session`          | Session name (default: current directory name)                                                           |
+| `--port`                 | Bind to this port; fails if in use (no auto-increment)                                                   |
+| `--persist-handlers [N]` | Persist handlers across page refreshes — **enabled by default**; pass `N` to cap at N most recent (FIFO) |
+| `--no-persist-handlers`  | Disable handler persistence                                                                              |
+| `--single-client`        | Only broadcast to the most recently connected tab (default: broadcast to all)                            |
 
 ### `add <handlers...>`
 
