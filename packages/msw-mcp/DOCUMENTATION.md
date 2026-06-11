@@ -273,7 +273,7 @@ No installation needed! Use directly with npx:
   "mcpServers": {
     "msw-mcp-server": {
       "command": "npx",
-      "args": ["msw-mcp@latest", "--mock-ws-port=6789", "--persist-handlers"]
+      "args": ["msw-mcp@latest", "--mock-ws-port=6789"]
     }
   }
 }
@@ -292,7 +292,7 @@ Then use in Claude Desktop config:
   "mcpServers": {
     "msw-mcp-server": {
       "command": "msw-mcp",
-      "args": ["--mock-ws-port=6789", "--persist-handlers"]
+      "args": ["--mock-ws-port=6789"]
     }
   }
 }
@@ -331,7 +331,8 @@ Then use in Claude Desktop config:
 
 - `--mock-ws-port <port>` or `--mock-ws-port=<port>` - WebSocket server port (default: 6789)
 - `--single-client` - Only send messages to most recently connected tab (default: broadcast to all)
-- `--persist-handlers` - Persist all handlers to localStorage
+- `--persist-handlers` - Persist all handlers to localStorage **(enabled by default)**
+- `--no-persist-handlers` - Disable handler persistence
 - `--persist-handlers=<N>` - Persist only N most recent handlers (FIFO)
 
 ### Quick Setup with `/msw-setup` Prompt
@@ -439,7 +440,10 @@ export async function enableMocking() {
     worker,
     wsEnabled: isWSEnabled,
     wsBridgeOptions: {
-      url: process.env.MCP_SERVER_URL || 'ws://localhost:6789',
+      url:
+        process.env.MSW_WS_URL ||
+        process.env.MCP_SERVER_URL ||
+        'ws://localhost:6789',
     },
     workerOptions: {
       onUnhandledRequest: 'bypass',
@@ -467,7 +471,7 @@ Create `.env.local`:
 ```bash
 ENABLE_MSW_MOCK=true
 ENABLE_MSW_WS_MOCK=true
-MCP_SERVER_URL=ws://localhost:6789
+MSW_WS_URL=ws://localhost:6789
 ```
 
 **5. Integrate with your app:**
@@ -700,16 +704,16 @@ npx msw-mcp@latest --mock-ws-port=3001 --single-client --persist-handlers=10
 **Using node directly:**
 
 ```bash
-# Default: broadcast to all tabs, no persistence
+# Default: broadcast to all tabs, persistence on
 node build/index.js --mock-ws-port=3001
 
 # Single-client mode: only the latest tab receives messages
 node build/index.js --mock-ws-port=3001 --single-client
 
-# Persist all handlers across page refreshes
-node build/index.js --persist-handlers
+# Disable handler persistence
+node build/index.js --no-persist-handlers
 
-# Persist only the 10 most recent handlers
+# Persist only the 10 most recent handlers (FIFO)
 node build/index.js --persist-handlers=10
 ```
 
@@ -720,7 +724,7 @@ node build/index.js --persist-handlers=10
 
 **Handler Persistence:**
 
-When `--persist-handlers` is enabled, dynamically added handlers are saved to the browser's localStorage and automatically restored on page refresh. This prevents the need to re-add handlers after every reload.
+Dynamically added handlers are saved to the browser's localStorage and automatically restored on page refresh by default. Use `--no-persist-handlers` to opt out.
 
 - **Storage key**: `msw_dynamic_handlers`
 - **FIFO behavior**: When a limit is set (e.g., `--persist-handlers=10`), only the N most recently added handlers are kept
@@ -734,14 +738,14 @@ When `--persist-handlers` is enabled, dynamically added handlers are saved to th
 
 **Environment Variables:**
 
-- `MCP_SERVER_URL` - WebSocket server URL (default: `ws://localhost:6789`)
+- `MSW_WS_URL` - WebSocket server URL (default: `ws://localhost:6789`; `MCP_SERVER_URL` accepted as a legacy fallback)
 - `NODE_ENV` - Must be `development` for bridge to activate
 
 **Constructor Options:**
 
 ```javascript
 const bridge = createMSWBridge(worker, {
-  url: 'ws://localhost:3001', // MCP server URL
+  url: 'ws://localhost:3001', // WebSocket bridge URL (from msw-cli open)
   reconnectInterval: 5000, // Time between reconnect attempts (ms)
   maxReconnectAttempts: 10, // Max reconnection attempts
 });

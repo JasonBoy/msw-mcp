@@ -16,7 +16,10 @@ Expose MSW on `window` (required for dynamic handler evaluation), then connect t
 import { initMocking } from '@msw-mcp/client';
 
 await initMocking(worker, {
-  url: import.meta.env.VITE_MCP_SERVER_URL ?? 'ws://localhost:6789',
+  url:
+    import.meta.env.VITE_MSW_WS_URL ??
+    import.meta.env.VITE_MCP_SERVER_URL ??
+    'ws://localhost:6789',
 });
 ```
 

@@ -15,7 +15,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   let port = 6789; // default port
   let singleClient = false; // default: broadcast to all clients
-  let persistHandlers = false; // default: no persistence
+  let persistHandlers = true; // default: persist handlers across page refreshes
   let persistLimit: number | null = null; // null = unlimited
 
   for (let i = 0; i < args.length; i++) {
@@ -27,7 +27,14 @@ function parseArgs() {
       continue;
     }
 
-    // Handle --persist-handlers flag
+    // Handle --no-persist-handlers flag (opt-out)
+    if (arg === '--no-persist-handlers') {
+      persistHandlers = false;
+      persistLimit = null;
+      continue;
+    }
+
+    // Handle --persist-handlers flag (explicit opt-in, or reset after --no-persist-handlers)
     if (arg === '--persist-handlers') {
       persistHandlers = true;
       persistLimit = null; // unlimited

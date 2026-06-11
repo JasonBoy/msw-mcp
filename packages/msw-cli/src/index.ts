@@ -95,11 +95,19 @@ function printSessionOpened(
 Update your app's MSW bridge to use the WebSocket URL above.${portNote}`);
 }
 
+interface DaemonOptions {
+  port?: number | undefined;
+  singleClient?: boolean | undefined;
+  persistHandlers?: boolean | undefined;
+  persistLimit?: number | null | undefined;
+}
+
 async function startDaemon(
   sessionName: string,
-  port?: number,
+  options: DaemonOptions = {},
 ): Promise<SessionInfo> {
   const daemonPath = getDaemonPath();
+  const { port, singleClient, persistHandlers, persistLimit } = options;
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -109,6 +117,18 @@ async function startDaemon(
   if (port !== undefined) {
     env.MSW_PORT = String(port);
     env.MSW_STRICT_PORT = 'true';
+  }
+
+  if (singleClient) {
+    env.MSW_SINGLE_CLIENT = 'true';
+  }
+
+  if (persistHandlers) {
+    env.MSW_PERSIST_HANDLERS = 'true';
+  }
+
+  if (persistLimit != null) {
+    env.MSW_PERSIST_LIMIT = String(persistLimit);
   }
 
   const child = spawn('node', [daemonPath], {
@@ -222,6 +242,15 @@ program
       return parsed;
     },
   )
+  .option(
+    '--single-client',
+    'Only broadcast to the most recently connected tab',
+  )
+  .option(
+    '--persist-handlers [limit]',
+    'Persist handlers across page refreshes (enabled by default; optionally limit to N most recent)',
+    true,
+  )
   .addHelpText(
     'after',
     `
@@ -229,34 +258,64 @@ Examples:
   $ msw-cli open
   $ msw-cli open --port 6789
   $ msw-cli open -s my-app --port 6789
+  $ msw-cli open --no-persist-handlers
+  $ msw-cli open --persist-handlers 10
+  $ msw-cli open --single-client
 `,
   )
-  .action(async (options: { port?: number }) => {
-    const programOptions = program.opts();
-    const sessionName =
-      programOptions.session || SessionManager.getDefaultSessionName();
+  .action(
+    async (options: {
+      port?: number;
+      singleClient?: boolean;
+      persistHandlers?: boolean | string;
+    }) => {
+      const programOptions = program.opts();
+      const sessionName =
+        programOptions.session || SessionManager.getDefaultSessionName();
 
-    const existing = sessionManager.getSession(sessionName);
-    if (existing) {
-      if (options.port !== undefined && existing.port !== options.port) {
-        console.error(
-          `❌ Session "${sessionName}" is already open on port ${existing.port}. Close it first with \`msw-cli close\`.`,
-        );
-        process.exit(1);
+      const persistHandlers = options.persistHandlers !== false;
+      let persistLimit: number | null = null;
+
+      if (typeof options.persistHandlers === 'string') {
+        const parsed = parseInt(options.persistHandlers, 10);
+        if (isNaN(parsed) || parsed <= 0) {
+          console.error(
+            `❌ Invalid --persist-handlers value: ${options.persistHandlers} (must be a positive integer)`,
+          );
+          process.exit(1);
+        }
+        persistLimit = parsed;
       }
-      printSessionOpened(existing, {
-        ...(options.port !== undefined ? { requestedPort: options.port } : {}),
-        alreadyOpen: true,
-      });
-      return;
-    }
 
-    const session = await startDaemon(sessionName, options.port);
-    printSessionOpened(session, {
-      ...(options.port !== undefined ? { requestedPort: options.port } : {}),
-      alreadyOpen: false,
-    });
-  });
+      const existing = sessionManager.getSession(sessionName);
+      if (existing) {
+        if (options.port !== undefined && existing.port !== options.port) {
+          console.error(
+            `❌ Session "${sessionName}" is already open on port ${existing.port}. Close it first with \`msw-cli close\`.`,
+          );
+          process.exit(1);
+        }
+        printSessionOpened(existing, {
+          ...(options.port !== undefined
+            ? { requestedPort: options.port }
+            : {}),
+          alreadyOpen: true,
+        });
+        return;
+      }
+
+      const session = await startDaemon(sessionName, {
+        port: options.port,
+        singleClient: options.singleClient,
+        persistHandlers,
+        persistLimit,
+      });
+      printSessionOpened(session, {
+        ...(options.port !== undefined ? { requestedPort: options.port } : {}),
+        alreadyOpen: false,
+      });
+    },
+  );
 
 program
   .command('add <handlers...>')

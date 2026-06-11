@@ -145,7 +145,8 @@ See [DOCUMENTATION.md](./DOCUMENTATION.md) for detailed API reference.
 ### Server Arguments
 
 - `--mock-ws-port=<port>` - WebSocket server port (default: 6789)
-- `--persist-handlers` - Save handlers across page refreshes (or `--persist-handlers=10` persists only 10 most recent handlers)
+- `--persist-handlers` - Save handlers across page refreshes — **enabled by default**; pass `--persist-handlers=10` to keep only the 10 most recent (FIFO)
+- `--no-persist-handlers` - Disable handler persistence
 - `--single-client` - Only broadcast to the most recent tab
 
 ### Environment Variables for client bridge
@@ -157,7 +158,7 @@ Create `.env.local`:
 ```bash
 ENABLE_MSW_MOCK=true
 ENABLE_MSW_WS_MOCK=true
-MCP_SERVER_URL=ws://localhost:6789
+MSW_WS_URL=ws://localhost:6789
 ```
 
 ## Usage Examples
