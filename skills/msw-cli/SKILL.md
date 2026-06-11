@@ -11,6 +11,14 @@ Dynamically add, update, and remove MSW handlers while the app keeps running. Ru
 
 Project not set up yet? Use the **msw-setup** skill or run **`msw-cli setup`** first.
 
+## Agent guidelines
+
+When using this skill to change mocks:
+
+1. **Do not edit local handler files** (e.g. `handlers.ts`, `mocks/handlers`). `msw-cli` applies `add` / `update` / `remove` / `reset` to the **browser runtime** over the WebSocket session. Changing on-disk handler modules is the wrong tool and can confuse the next dev reload.
+
+2. **Before `open`**, check whether a session is already running: run **`msw-cli list`** (all open sessions) and, if a session for this project already exists, **`msw-cli status`** (or `status -s <name>`) to see connection and handlers. Only run **`open`** when no suitable session is active—avoid duplicate daemons for the same work.
+
 ## Quick start
 
 ```bash
@@ -21,11 +29,11 @@ msw-cli status                  # connected must be true for mocks to apply
 msw-cli close
 ```
 
-Use `msw-cli open --port 6789` when the app already hard-codes that port. Handler commands (`add`, `update`, `remove`, `reset`, `status`) **require** `open` first — otherwise you get "Session not open".
+Use `msw-cli open --port 6789` when the app already hard-codes that port. **`list`** works without a session. Handler commands (`add`, `update`, `remove`, `reset`, `status`) **require** an open session for that cwd (or `-s`) — otherwise you get "Session not open".
 
 ## Workflow
 
-1. `open` — start daemon; read **Port** and **WebSocket** from markdown output.
+1. **`list`** / **`status`** — confirm no session is already open (or reuse it). Then **`open`** only if needed — start daemon; read **Port** and **WebSocket** from markdown output.
 2. Sync app — if port auto-changed (6789 busy), set `ws://127.0.0.1:<port>` in `MSW_WS_URL` / `VITE_MSW_WS_URL` / `NEXT_PUBLIC_MSW_WS_URL` env.
 3. `add` / `update` / `remove` / `reset` — handler changes.
 4. `status` — confirm browser connected.
@@ -54,7 +62,7 @@ Sessions: default name = current directory basename. State: `~/.msw-cli/sessions
 
 ## Troubleshooting
 
-- **Session not open** → run `msw-cli open`, then retry.
+- **Session not open** → run `msw-cli list`; if no session for this project, run `open`, then retry.
 - **No browser clients connected** → app not wired to the WebSocket URL from `open`; fix port/env and reload.
 - **Mock not firing** → match request path exactly or use wildcards (`*/api/users/*`).
 - **`open --port` fails** → port in use; free it or use `open` without `--port` and sync app to the new port.
