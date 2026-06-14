@@ -23,6 +23,9 @@ interface WSResponse {
   activeHandlers: string[];
   workerStatus: string;
   error?: string;
+  removedCount?: number;
+  matchedCount?: number;
+  addedCount?: number;
 }
 
 export class MSWWebSocketBridge {
@@ -185,16 +188,22 @@ export class MSWWebSocketBridge {
           break;
 
         case 'REMOVE_HANDLERS':
-          this.removeHandlers(message.patterns || [], message.methods);
+          response.removedCount = this.removeHandlers(
+            message.patterns || [],
+            message.methods,
+          );
           break;
 
-        case 'UPDATE_HANDLERS':
-          this.updateHandlers(
+        case 'UPDATE_HANDLERS': {
+          const updateResult = this.updateHandlers(
             message.patterns || [],
             message.handlers || [],
             message.methods,
           );
+          response.matchedCount = updateResult.matchedCount;
+          response.addedCount = updateResult.addedCount;
           break;
+        }
 
         case 'GET_STATUS':
           // Response already set up above with STATUS_RESPONSE type
@@ -320,7 +329,7 @@ export class MSWWebSocketBridge {
     }
   }
 
-  private removeHandlers(patterns: string[], methods?: string[]): void {
+  private removeHandlers(patterns: string[], methods?: string[]): number {
     console.log(
       '[MSW Bridge] Removing handlers matching patterns:',
       patterns,
@@ -375,13 +384,15 @@ export class MSWWebSocketBridge {
 
     // Save updated handlers to localStorage
     this.saveHandlers();
+
+    return handlersToRemove.length;
   }
 
   private updateHandlers(
     patterns: string[],
     newHandlerStrings: string[],
     methods?: string[],
-  ): void {
+  ): { matchedCount: number; addedCount: number } {
     console.log(
       '[MSW Bridge] Updating handlers matching patterns:',
       patterns,
@@ -497,6 +508,11 @@ export class MSWWebSocketBridge {
 
     // Save updated handlers to localStorage
     this.saveHandlers();
+
+    return {
+      matchedCount: handlersToRemove.length,
+      addedCount: newHandlers.length,
+    };
   }
 
   private matchesPattern(handlerString: string, pattern: string): boolean {

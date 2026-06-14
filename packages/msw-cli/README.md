@@ -85,7 +85,15 @@ Update existing MSW handlers that match specified URL string patterns.
 
 ```bash
 $ msw-cli update "/api/user" -h "http.get('/api/user', () => HttpResponse.json({ id: 2 }))"
+$ msw-cli update "/api/user" -m GET -h "http.get('/api/user', () => HttpResponse.json({ id: 2 }))"
 ```
+
+| Flag             | Description                                                |
+| ---------------- | ---------------------------------------------------------- |
+| `-h, --handlers` | New handler code string(s) (required)                      |
+| `-m, --method`   | Filter matched handlers by HTTP method(s), e.g. `GET POST` |
+
+Patterns match the handler **URL only** (substring or `*` glob), not the HTTP method. A leading method token (e.g. `"GET /api/user"`, as shown by `status`) is auto-split into a method filter. The command reports how many handlers matched; if **0 matched**, the new handler is still added (like `add`) and a warning is printed — fix the pattern to actually replace.
 
 ### `remove <patterns...>`
 
@@ -93,7 +101,15 @@ Remove MSW handlers matching specified URL patterns.
 
 ```bash
 $ msw-cli remove "/api/user"
+$ msw-cli remove "*/api/v1/users/*"
+$ msw-cli remove "/api/user" -m GET
 ```
+
+| Flag           | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| `-m, --method` | Filter matched handlers by HTTP method(s), e.g. `GET POST` |
+
+Patterns match the handler **URL only** (substring or `*` glob), not the HTTP method. A leading method token (e.g. `"GET /api/user"`) is auto-split into a method filter. The command reports how many handlers were removed; **`Removed 0`** means the pattern matched nothing — fix the pattern (drop the method prefix) and retry.
 
 ### `reset [handlers...]`
 

@@ -43,9 +43,27 @@ Sessions: default name = current directory basename. State: `~/.msw-cli/sessions
 
 ## Handler rules
 
-- Valid JS strings; `http`, `graphql`, `HttpResponse` are in scope (no imports).
+- Valid JS strings; `http`, `graphql`, `HttpResponse`, `bypass`, `passthrough`, `delay` are in scope (no imports).
 - Wrap handlers in double quotes; use single quotes inside JS.
 - Return a `Response` via `HttpResponse` (e.g. `HttpResponse.json({ ok: true })`).
+- **Passthrough / partial override** — fetch the real response, then override fields. Always wrap the request in `bypass()` to avoid an infinite intercept loop:
+
+```bash
+msw-cli add "http.get('*/api/user', async ({ request }) => { const res = await fetch(bypass(request)); const data = await res.json(); return HttpResponse.json({ ...data, role: 'admin' }) })"
+```
+
+## Pattern matching (remove / update)
+
+`status` displays handlers as `METHOD URL`, e.g. `GET */api/v1/users/*`. But `remove` / `update` patterns match the **handler URL only** (substring or `*` glob) — not the method.
+
+| Command           | Pattern is…                    | Example                |
+| ----------------- | ------------------------------ | ---------------------- |
+| `status`          | Display only: `METHOD` + `URL` | `GET */api/v1/users/*` |
+| `remove`/`update` | URL substring or `*` glob      | `*/api/v1/users/*`     |
+
+- To filter by method, use `-m, --method <methods...>` (e.g. `remove "*/api/users" -m GET`).
+- A leading method token in the pattern (e.g. `"GET */api/users"`, copied from `status`) is auto-split into a method filter, so pasting a status line works — but prefer the URL-only pattern plus `-m` for clarity.
+- `remove`/`update` report how many handlers matched. **`Removed 0`** or **`0 matched`** means the pattern matched nothing — fix the pattern, do not retry with another `update` (that just adds a duplicate).
 
 ## Commands
 
@@ -53,8 +71,8 @@ Sessions: default name = current directory basename. State: `~/.msw-cli/sessions
 | -------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | `open [--port N] [-s name] [--no-persist-handlers] [--persist-handlers N] [--single-client]` | Start/reuse daemon (required first)       |
 | `add "<handler>"`                                                                            | Add handler(s)                            |
-| `update "<pattern>" -h "<handler>"`                                                          | Replace handlers matching pattern         |
-| `remove "<pattern>"`                                                                         | Remove handlers                           |
+| `update "<pattern>" [-m METHOD...] -h "<handler>"`                                           | Replace handlers matching pattern         |
+| `remove "<pattern>" [-m METHOD...]`                                                          | Remove handlers (reports match count)     |
 | `reset [handlers...]`                                                                        | Clear runtime handlers (optional new set) |
 | `status`                                                                                     | Connection + active handlers              |
 | `list`                                                                                       | All open sessions                         |
@@ -65,5 +83,7 @@ Sessions: default name = current directory basename. State: `~/.msw-cli/sessions
 - **Session not open** → run `msw-cli list`; if no session for this project, run `open`, then retry.
 - **No browser clients connected** → app not wired to the WebSocket URL from `open`; fix port/env and reload.
 - **Mock not firing** → match request path exactly or use wildcards (`*/api/users/*`).
+- **`remove` says "Removed 0"** → the pattern matched no handler. Drop any HTTP method prefix (patterns match the URL only) and match the URL from `status`, e.g. `remove "*/api/v1/users/*"`. Use `-m GET` to filter by method.
+- **Duplicate handlers after `update`** → the `update` pattern matched nothing, so it added a second handler instead of replacing (the CLI warns `0 matched`). `remove "*/api/..."` the extras, then `update`/`add` once with a correct URL pattern.
 - **`open --port` fails** → port in use; free it or use `open` without `--port` and sync app to the new port.
 - **Handler syntax errors** → check shell quoting and JS validity.

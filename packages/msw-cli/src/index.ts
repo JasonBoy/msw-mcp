@@ -157,6 +157,75 @@ async function startDaemon(
   process.exit(1);
 }
 
+const HTTP_METHODS = [
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+  'OPTIONS',
+  'HEAD',
+  'ALL',
+];
+
+/**
+ * Split an optional leading HTTP method token off each pattern (so a copied
+ * status line like 'GET /api/users' is understood as method=GET +
+ * pattern '/api/users'), and merge those with any explicit --method flags.
+ */
+function parsePatternsAndMethods(
+  patterns: string[],
+  methodFlags?: string[],
+): { patterns: string[]; methods: string[] | undefined } {
+  const methods = new Set<string>();
+  for (const method of methodFlags ?? []) {
+    methods.add(method.toUpperCase());
+  }
+
+  const cleanedPatterns = patterns.map((pattern) => {
+    const match = pattern.match(/^([A-Za-z]+)\s+(.+)$/);
+    const leadingToken = match?.[1];
+    const remainder = match?.[2];
+    if (
+      leadingToken &&
+      remainder &&
+      HTTP_METHODS.includes(leadingToken.toUpperCase())
+    ) {
+      methods.add(leadingToken.toUpperCase());
+      return remainder.trim();
+    }
+    return pattern;
+  });
+
+  return {
+    patterns: cleanedPatterns,
+    methods: methods.size > 0 ? Array.from(methods) : undefined,
+  };
+}
+
+function formatSuccess(type: string, data: Record<string, any>): string {
+  const handlerCount = Array.isArray(data.activeHandlers)
+    ? data.activeHandlers.length
+    : 0;
+
+  if (type === 'REMOVE_HANDLERS' && typeof data.removedCount === 'number') {
+    if (data.removedCount === 0) {
+      return `⚠️ Removed 0 handlers — no active handler matched the pattern(s). Patterns match the handler URL only (substring or * glob); drop any HTTP method prefix or use -m/--method to filter by method. Active handlers: ${handlerCount}`;
+    }
+    return `✅ Removed ${data.removedCount} handler(s). Active handlers: ${handlerCount}`;
+  }
+
+  if (type === 'UPDATE_HANDLERS' && typeof data.matchedCount === 'number') {
+    const added = typeof data.addedCount === 'number' ? data.addedCount : 0;
+    if (data.matchedCount === 0) {
+      return `⚠️ 0 handlers matched — added ${added} new handler(s) (behaved like 'add'). If you meant to replace an existing handler, the pattern did not match: patterns match the handler URL only; drop any HTTP method prefix or use -m/--method. Active handlers: ${handlerCount}`;
+    }
+    return `✅ Updated: replaced ${data.matchedCount} handler(s) with ${added} new. Active handlers: ${handlerCount}`;
+  }
+
+  return `✅ ${data.message || `Success. Active handlers: ${handlerCount}`}`;
+}
+
 async function executeCommand(type: string, payload: Record<string, unknown>) {
   const options = program.opts();
   const sessionName = options.session || SessionManager.getDefaultSessionName();
@@ -175,12 +244,7 @@ async function executeCommand(type: string, payload: Record<string, unknown>) {
 
     const data = await response.json();
     if (data.status === 'success' || data.type === 'SUCCESS') {
-      const handlerCount = Array.isArray(data.activeHandlers)
-        ? data.activeHandlers.length
-        : 0;
-      console.log(
-        `✅ Success: ${data.message || `Operation completed. Active handlers: ${handlerCount}`}`,
-      );
+      console.log(formatSuccess(type, data));
     } else {
       console.error(`❌ Error: ${data.error || 'Unknown error'}`);
       console.error(
@@ -340,34 +404,73 @@ program
     'Update existing MSW handlers that match specified URL patterns.',
   )
   .requiredOption('-h, --handlers <handlers...>', 'New handlers code strings')
+  .option(
+    '-m, --method <methods...>',
+    'Filter matched handlers by HTTP method(s), e.g. GET POST',
+  )
   .addHelpText(
     'after',
     `
+Patterns match the handler URL only (substring or * glob) — NOT the HTTP method.
+Do not paste the "METHOD URL" line from \`status\` as-is unless you want that
+method filtered: a leading method token (e.g. "GET ") is auto-split into a
+method filter. To target a method explicitly, use -m/--method.
+
+Reports how many handlers matched. If 0 match, the new handler is still added
+(behaves like \`add\`) and a warning is printed — fix the pattern to replace.
+
 Examples:
   $ msw-cli open
   $ msw-cli update "/api/user" -h "http.get('/api/user', () => HttpResponse.json({ id: 2 }))"
+  $ msw-cli update "/api/user" -m GET -h "http.get('/api/user', () => HttpResponse.json({ id: 2 }))"
 `,
   )
   .action((patterns, options) => {
-    executeCommand('UPDATE_HANDLERS', {
+    const { patterns: parsedPatterns, methods } = parsePatternsAndMethods(
       patterns,
+      options.method,
+    );
+    executeCommand('UPDATE_HANDLERS', {
+      patterns: parsedPatterns,
       handlers: options.handlers,
+      ...(methods ? { methods } : {}),
     });
   });
 
 program
   .command('remove <patterns...>')
   .description('Remove MSW handlers matching specified URL patterns.')
+  .option(
+    '-m, --method <methods...>',
+    'Filter matched handlers by HTTP method(s), e.g. GET POST',
+  )
   .addHelpText(
     'after',
     `
+Patterns match the handler URL only (substring or * glob) — NOT the HTTP method.
+Do not paste the "METHOD URL" line from \`status\` as-is unless you want that
+method filtered: a leading method token (e.g. "GET ") is auto-split into a
+method filter. To target a method explicitly, use -m/--method.
+
+Reports how many handlers were removed. "Removed 0" means the pattern matched
+nothing — fix the pattern (drop the method prefix) and retry.
+
 Examples:
   $ msw-cli open
   $ msw-cli remove "/api/user"
+  $ msw-cli remove "*/api/v1/users/*"
+  $ msw-cli remove "/api/user" -m GET
 `,
   )
-  .action((patterns) => {
-    executeCommand('REMOVE_HANDLERS', { patterns });
+  .action((patterns, options) => {
+    const { patterns: parsedPatterns, methods } = parsePatternsAndMethods(
+      patterns,
+      options.method,
+    );
+    executeCommand('REMOVE_HANDLERS', {
+      patterns: parsedPatterns,
+      ...(methods ? { methods } : {}),
+    });
   });
 
 program
@@ -477,5 +580,12 @@ program
       sessionManager.removeSession(session.name);
     }
   });
+
+// Commander only allows one short flag per option, so the default version
+// option registers `-V`. Accept lowercase `-v` as a top-level alias too.
+if (process.argv[2] === '-v') {
+  console.log(packageJson.version);
+  process.exit(0);
+}
 
 program.parse(process.argv);
