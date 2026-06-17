@@ -26,6 +26,9 @@ export interface WSResponse extends WSMessage {
   activeHandlers?: string[];
   workerStatus?: 'running' | 'stopped' | 'unknown';
   error?: string;
+  removedCount?: number;
+  matchedCount?: number;
+  addedCount?: number;
 }
 
 export interface MSWStatus {

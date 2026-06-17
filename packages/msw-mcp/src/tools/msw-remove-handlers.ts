@@ -36,11 +36,29 @@ export function createMSWRemoveHandlersTool(wsServer: WSServer) {
 
         if (response.type === 'SUCCESS') {
           const methodInfo = methods ? ` (methods: ${methods.join(', ')})` : '';
+          const activeCount = response.activeHandlers?.length || 0;
+          const removedCount = response.removedCount;
+
+          if (removedCount === 0) {
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: `Removed 0 handlers — no active handler matched patterns: ${patterns.join(', ')}${methodInfo}. Patterns match the handler URL only (substring or * glob); do not include the HTTP method in the pattern, use the methods parameter instead. Active handlers: ${activeCount}`,
+                },
+              ],
+            };
+          }
+
+          const removedInfo =
+            typeof removedCount === 'number'
+              ? `Removed ${removedCount} handler(s)`
+              : `Successfully removed handlers`;
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `Successfully removed handlers matching patterns: ${patterns.join(', ')}${methodInfo}. Active handlers: ${response.activeHandlers?.length || 0}`,
+                text: `${removedInfo} matching patterns: ${patterns.join(', ')}${methodInfo}. Active handlers: ${activeCount}`,
               },
             ],
           };

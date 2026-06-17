@@ -79,11 +79,30 @@ export function createMSWUpdateHandlersTool(wsServer: WSServer) {
 
         if (response.type === 'SUCCESS') {
           const methodInfo = methods ? ` (methods: ${methods.join(', ')})` : '';
+          const activeCount = response.activeHandlers?.length || 0;
+          const matchedCount = response.matchedCount;
+          const addedCount = response.addedCount ?? handlers.length;
+
+          if (matchedCount === 0) {
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: `0 handlers matched patterns: ${patterns.join(', ')}${methodInfo} — added ${addedCount} new handler(s) instead (behaved like add). If you meant to replace an existing handler, the pattern did not match: patterns match the handler URL only; do not include the HTTP method in the pattern, use the methods parameter instead. Active handlers: ${activeCount}`,
+                },
+              ],
+            };
+          }
+
+          const matchedInfo =
+            typeof matchedCount === 'number'
+              ? `Replaced ${matchedCount} handler(s) with ${addedCount} new`
+              : `Replaced with ${addedCount} new handler(s)`;
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `Successfully updated handlers matching patterns: ${patterns.join(', ')}${methodInfo}. Replaced with ${handlers.length} new handler(s). Active handlers: ${response.activeHandlers?.length || 0}`,
+                text: `Successfully updated handlers matching patterns: ${patterns.join(', ')}${methodInfo}. ${matchedInfo}. Active handlers: ${activeCount}`,
               },
             ],
           };

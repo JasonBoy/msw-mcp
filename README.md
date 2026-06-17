@@ -10,15 +10,13 @@ https://github.com/user-attachments/assets/06959759-b198-4cd1-ae2b-11ede32acd8e
 
 ## Key features
 
-- 🤖 **AI-assisted handlers** — Describe or paste intent; assistants generate MSW handlers (`http.*`, `HttpResponse`, etc.) without editing app source for every tweak.
-- ⚡ **Live mocks** — Add, update, remove, or reset handlers while the dev app stays open; no restart required for handler changes delivered over the bridge.
-- 🌉 **WebSocket bridge** — [`@msw-mcp/core`](packages/core) brokers MCP (stdio) ↔ browser [`@msw-mcp/client`](packages/client) so the worker stays the single interception point.
-- 🛠️ **`/msw-setup` prompt** — MCP-hosted setup flow scaffolds `msw`, client bridge, env hints, and mocks layout for common frameworks.
-- 🎛️ **MCP tool surface** — `msw_add_handlers`, `msw_update_handlers`, `msw_remove_handlers`, `msw_reset_handlers`, `msw_get_status` for structured control from any MCP client.
-- 💻 **`msw-cli`** — Same dynamic mocking from the terminal or scripts (`setup`, `open`, handler commands) when you are not using MCP.
-- ⚙️ **Operator-friendly server flags** — Configurable WebSocket port (`--mock-ws-port`), optional handler persistence across reloads (`--persist-handlers`), and optional single-tab targeting (`--single-client`) on [`msw-mcp`](packages/msw-mcp).
-- 📚 **Docs site** — Starlight site under [`apps/docs`](apps/docs) for CLI, MCP, and integration guides.
-- ✨ **Agent skills (optional)** — [`skills/msw-cli`](skills/msw-cli) and [`skills/msw-setup`](skills/msw-setup) for Cursor-style agents that load `SKILL.md` guidance alongside the tools.
+- 🤖 **Generate MSW handlers with AI**
+- ⚡ **Update mocks without reloading the page**
+- 🌉 **WebSocket bridge between Cli/MCP and the browser**
+- 🛠️ **Scaffold MSW setup with `msw-cli setup` or MCP's `/msw-setup` prompt**
+- 💻 **Terminal and script control via `msw-cli`**
+- ⚙️ **Configurable port, persistence, and client targeting**
+- ✨ **Agent skills for AI agents to use**
 
 ## Structure
 
