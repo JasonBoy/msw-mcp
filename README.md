@@ -1,5 +1,10 @@
 # MSW AI Agent Bridge Monorepo
 
+[![npm version](https://img.shields.io/npm/v/msw-cli)](https://www.npmjs.com/package/msw-cli)
+[![npm version](https://img.shields.io/npm/v/msw-mcp?label=msw-mcp)](https://www.npmjs.com/package/msw-mcp)
+[![CI](https://github.com/JasonBoy/msw-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JasonBoy/msw-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/JasonBoy/msw-mcp)](LICENSE)
+
 This monorepo provides a suite of tools that bridge AI agents with Mock Service Worker (MSW). It enables dynamic addition, updating, and removal of MSW network mocks directly from a command-line interface or AI tool execution, completely independently of the application source code restarts.
 
 ## Demo
