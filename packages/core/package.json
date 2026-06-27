@@ -10,7 +10,9 @@
     "prompts/"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "uuid": "^13.0.0",

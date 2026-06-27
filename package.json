@@ -7,15 +7,20 @@
     "dev": "turbo run dev",
     "format": "turbo run format",
     "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
     "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.1.9",
     "husky": "^9.1.7",
+    "jsdom": "^26.0.0",
     "lint-staged": "^16.2.3",
     "prettier": "^3.6.2",
     "turbo": "2.9.7",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.9"
   },
   "lint-staged": {
     "*.{js,ts,json,md}": [
