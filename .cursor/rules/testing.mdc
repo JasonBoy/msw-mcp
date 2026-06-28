@@ -1,0 +1,17 @@
+---
+description: Add Vitest tests when changing behavior in this monorepo
+alwaysApply: true
+---
+
+# Testing
+
+When adding or changing features, add or update tests. See [AGENTS.md](../../AGENTS.md) for full conventions.
+
+- **Runner:** Vitest v4 — `pnpm run test` from repo root
+- **Files:** Co-locate as `src/**/*.test.ts` (excluded from `tsc` build)
+- **Environments:** Node (`core`, `msw-cli`, `msw-mcp`); jsdom (`@msw-mcp/client`)
+- **Patterns:** Unit tests with mocks; integration tests only for real WS/HTTP round-trips in `core`
+- **CLI:** Test pure logic in `msw-cli/src/helpers.ts`, not `index.ts`
+- **MCP tools:** Inject a fake `wsServer.sendMessage` — see existing tests in `packages/msw-mcp/src/tools/`
+
+Before finishing, run `pnpm run test` (and `pnpm run build` if types changed).

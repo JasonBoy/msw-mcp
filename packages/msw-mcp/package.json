@@ -20,6 +20,8 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "watch": "tsc --watch",
     "dev": "pnpm run build && node build/index.js",
     "start": "node build/index.js",
